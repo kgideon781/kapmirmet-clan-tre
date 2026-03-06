@@ -339,10 +339,11 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
                           grandparent && { key: 'grandparent', label: `Move up to ${grandparent.name}`, hint: "Adopted into the grandparent's line" },
                           { key: 'seedling', label: 'Make seedlings', hint: 'Detach — appear as unlinked nodes' },
                           (isAdmin || isMod) && { key: 'reroute', label: 'Reroute to another person', hint: 'Choose who inherits them' },
+                          (isAdmin || isMod) && { key: 'cascade', label: 'Delete entire branch', hint: 'Permanently removes all descendants too', danger: true },
                         ].filter(Boolean).map((opt) => (
-                          <button key={opt.key} onClick={() => { setDescendantAction(opt.key); setRerouteTarget(null); setRerouteSearch(''); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', padding: '8px 10px', background: descendantAction === opt.key ? 'rgba(218,165,32,0.1)' : 'rgba(92,64,51,0.08)', border: `1px solid ${descendantAction === opt.key ? 'rgba(218,165,32,0.4)' : 'rgba(92,64,51,0.2)'}`, borderRadius: '7px', cursor: 'pointer', textAlign: 'left' }}>
-                            <span style={{ fontSize: '12px', color: descendantAction === opt.key ? '#DAA520' : '#D4C4A8', fontFamily: 'var(--font-body)', fontWeight: 500 }}>{opt.label}</span>
-                            <span style={{ fontSize: '10px', color: '#7B6845', fontFamily: 'var(--font-mono)' }}>{opt.hint}</span>
+                          <button key={opt.key} onClick={() => { setDescendantAction(opt.key); setRerouteTarget(null); setRerouteSearch(''); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', padding: '8px 10px', background: descendantAction === opt.key ? (opt.danger ? 'rgba(224,85,85,0.12)' : 'rgba(218,165,32,0.1)') : 'rgba(92,64,51,0.08)', border: `1px solid ${descendantAction === opt.key ? (opt.danger ? 'rgba(224,85,85,0.5)' : 'rgba(218,165,32,0.4)') : 'rgba(92,64,51,0.2)'}`, borderRadius: '7px', cursor: 'pointer', textAlign: 'left' }}>
+                            <span style={{ fontSize: '12px', color: descendantAction === opt.key ? (opt.danger ? '#e05555' : '#DAA520') : '#D4C4A8', fontFamily: 'var(--font-body)', fontWeight: 500 }}>{opt.label}</span>
+                            <span style={{ fontSize: '10px', color: opt.danger ? 'rgba(224,85,85,0.6)' : '#7B6845', fontFamily: 'var(--font-mono)' }}>{opt.hint}</span>
                           </button>
                         ))}
                       </div>

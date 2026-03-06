@@ -42,11 +42,29 @@ begin
   -- Fetch parent for 'grandparent' action
   select parent_id into v_parent_id from people where id = person_id;
 
-  -- Reroute children
+  -- Reroute / handle children
   if descendant_action = 'grandparent' then
     update people set parent_id = v_parent_id where parent_id = person_id;
   elsif descendant_action = 'reroute' and new_parent_id is not null then
     update people set parent_id = new_parent_id where parent_id = person_id;
+  elsif descendant_action = 'cascade' then
+    -- Clear mother_id refs from outside the branch pointing into it
+    with recursive branch as (
+      select id from people where parent_id = person_id
+      union all
+      select p.id from people p inner join branch b on p.parent_id = b.id
+    )
+    update people set mother_id = null
+    where mother_id in (select id from branch)
+      and id not in (select id from branch)
+      and id != person_id;
+    -- Delete entire branch
+    with recursive branch as (
+      select id from people where parent_id = person_id
+      union all
+      select p.id from people p inner join branch b on p.parent_id = b.id
+    )
+    delete from people where id in (select id from branch);
   else -- 'seedling' (default)
     update people set parent_id = null, is_seedling = true where parent_id = person_id;
   end if;
