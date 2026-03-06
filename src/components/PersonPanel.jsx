@@ -40,6 +40,7 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
   const [rerouteSearch, setRerouteSearch]        = useState('');
   const [rerouteTarget, setRerouteTarget]        = useState(null);
   const [deleting, setDeleting]                  = useState(false);
+  const [deleteError, setDeleteError]            = useState(null);
   const fileInputRef = useRef(null);
 
   if (!person) return null;
@@ -121,6 +122,7 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
 
   async function handleDelete() {
     setDeleting(true);
+    setDeleteError(null);
     try {
       const action = children.length === 0 ? 'seedling' : descendantAction;
       const newParentId = action === 'grandparent'
@@ -132,6 +134,7 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
       onPersonDeleted?.();
     } catch (e) {
       console.error(e);
+      setDeleteError(e.message || 'Delete failed. Have you run migration-v4.sql in Supabase?');
       setDeleting(false);
     }
   }
@@ -372,6 +375,12 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
                   ) : (
                     <p style={{ fontSize: '12px', color: '#A89070', fontFamily: 'var(--font-body)', margin: '0 0 10px', lineHeight: 1.5 }}>
                       No children. {person.name} will be permanently removed from the tree.
+                    </p>
+                  )}
+
+                  {deleteError && (
+                    <p style={{ fontSize: '11.5px', color: '#e05555', fontFamily: 'var(--font-body)', margin: '0 0 8px', lineHeight: 1.4, padding: '7px 10px', background: 'rgba(224,85,85,0.08)', borderRadius: '6px', border: '1px solid rgba(224,85,85,0.2)' }}>
+                      {deleteError}
                     </p>
                   )}
 
