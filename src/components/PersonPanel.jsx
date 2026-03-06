@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { X, UserPlus, Camera, MessageCircle, Send, Check, Loader } from 'lucide-react';
+import { X, UserPlus, Camera, MessageCircle, Send, Check, Loader, Trash2 } from 'lucide-react';
 import { BADGE_MAP, CLAN_COLORS } from '../data/clanData';
-import { claimProfile } from '../lib/db';
+import { claimProfile, deletePerson } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 
-export default function PersonPanel({ person, onClose, onAddRelative, onLoginRequired }) {
-  const { user } = useAuth();
+export default function PersonPanel({ person, onClose, onAddRelative, onLoginRequired, onPersonDeleted }) {
+  const { user, isMod, role } = useAuth();
+  const isAdmin = role === 'admin';
   const [claiming, setClaiming]   = useState(false);
   const [claimed,  setClaimedLocal] = useState(false);
+  const [deleting, setDeleting]   = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (!person) return null;
 
@@ -19,6 +22,19 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
     try { await claimProfile(person.id); setClaimedLocal(true); }
     catch (e) { console.error(e); }
     finally { setClaiming(false); }
+  }
+
+  async function handleDelete() {
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    setDeleting(true);
+    try {
+      await deletePerson(person.id);
+      onPersonDeleted?.();
+    } catch (e) {
+      console.error(e);
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
   }
 
   function guardedAdd(rel) {
@@ -196,6 +212,27 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 10px', background: 'rgba(218,165,32,0.08)', border: '1px solid rgba(218,165,32,0.2)', borderRadius: '8px', fontSize: '11px', color: '#DAA520', fontFamily: 'var(--font-mono)' }}>
             ⏳ Pending verification
           </div>
+        )}
+
+        {isAdmin && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+              padding: '9px 14px', marginTop: '4px',
+              background: confirmDelete ? 'rgba(224,85,85,0.18)' : 'rgba(224,85,85,0.07)',
+              border: `1px solid ${confirmDelete ? 'rgba(224,85,85,0.5)' : 'rgba(224,85,85,0.2)'}`,
+              borderRadius: '8px', color: '#e05555', cursor: 'pointer',
+              fontSize: '12.5px', fontFamily: 'var(--font-body)', fontWeight: 500,
+              transition: 'all 0.2s',
+            }}
+          >
+            {deleting
+              ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              : <Trash2 size={14} />}
+            {deleting ? 'Deleting…' : confirmDelete ? 'Confirm delete — cannot be undone' : 'Delete person'}
+          </button>
         )}
 
         <p style={{ fontSize: '10px', color: '#7B6845', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', margin: '4px 0 2px', textTransform: 'uppercase' }}>

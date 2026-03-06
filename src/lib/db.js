@@ -100,6 +100,11 @@ export async function claimProfile(personId) {
   if (error) throw error;
 }
 
+export async function deletePerson(id) {
+  const { error } = await supabase.from('people').delete().eq('id', id);
+  if (error) throw error;
+}
+
 export async function fetchPending() {
   const { data, error } = await supabase
     .from('people')
