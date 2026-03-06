@@ -1,10 +1,30 @@
-import { X, UserPlus, Camera, MessageCircle, Send, Check } from 'lucide-react';
+import { useState } from 'react';
+import { X, UserPlus, Camera, MessageCircle, Send, Check, Loader } from 'lucide-react';
 import { BADGE_MAP, CLAN_COLORS } from '../data/clanData';
+import { claimProfile } from '../lib/db';
+import { useAuth } from '../context/AuthContext';
 
-export default function PersonPanel({ person, onClose, onAddRelative }) {
+export default function PersonPanel({ person, onClose, onAddRelative, onLoginRequired }) {
+  const { user } = useAuth();
+  const [claiming, setClaiming]   = useState(false);
+  const [claimed,  setClaimedLocal] = useState(false);
+
   if (!person) return null;
 
   const badge = person.badge ? BADGE_MAP[person.badge] : null;
+
+  async function handleClaim() {
+    if (!user) { onLoginRequired?.(); return; }
+    setClaiming(true);
+    try { await claimProfile(person.id); setClaimedLocal(true); }
+    catch (e) { console.error(e); }
+    finally { setClaiming(false); }
+  }
+
+  function guardedAdd(rel) {
+    if (!user) { onLoginRequired?.(); return; }
+    onAddRelative?.(person, rel);
+  }
   const clan = person.clan || 'Kapmirmet';
   const colors = CLAN_COLORS[clan] || CLAN_COLORS.Kapmirmet;
   const isFounder = person.badge === 'founder';
@@ -157,17 +177,35 @@ export default function PersonPanel({ person, onClose, onAddRelative }) {
 
       {/* Action Buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '16px' }}>
-        {!person.claimed && (
-          <ActionBtn icon={<UserPlus size={14} />} label="Claim This Profile" highlight />
+        {!person.claimed && !claimed && (
+          <ActionBtn
+            icon={claiming ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <UserPlus size={14} />}
+            label={claiming ? 'Claiming…' : 'Claim This Profile'}
+            highlight
+            onClick={handleClaim}
+          />
         )}
+        {(person.claimed || claimed) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.25)', borderRadius: '8px', fontSize: '12px', color: '#4CAF50', fontFamily: 'var(--font-body)' }}>
+            <Check size={13} /> Profile claimed
+          </div>
+        )}
+
+        {/* Pending badge */}
+        {person.status === 'pending' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 10px', background: 'rgba(218,165,32,0.08)', border: '1px solid rgba(218,165,32,0.2)', borderRadius: '8px', fontSize: '11px', color: '#DAA520', fontFamily: 'var(--font-mono)' }}>
+            ⏳ Pending verification
+          </div>
+        )}
+
         <p style={{ fontSize: '10px', color: '#7B6845', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', margin: '4px 0 2px', textTransform: 'uppercase' }}>
           Add Relatives
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-          <ActionBtn icon="↓" label="Child" onClick={() => onAddRelative?.(person, 'child')} />
-          <ActionBtn icon="♀" label="Mother" onClick={() => onAddRelative?.(person, 'mother')} />
-          <ActionBtn icon="↑" label="Father" onClick={() => onAddRelative?.(person, 'father')} />
-          <ActionBtn icon="↔" label="Sibling" onClick={() => onAddRelative?.(person, 'sibling')} />
+          <ActionBtn icon="↓" label="Child"   onClick={() => guardedAdd('child')} />
+          <ActionBtn icon="♀" label="Mother"  onClick={() => guardedAdd('mother')} />
+          <ActionBtn icon="↑" label="Father"  onClick={() => guardedAdd('father')} />
+          <ActionBtn icon="↔" label="Sibling" onClick={() => guardedAdd('sibling')} />
         </div>
         <ActionBtn icon={<Camera size={14} />} label="Add Photos" />
         <ActionBtn icon={<MessageCircle size={14} />} label="Add a Memory" />

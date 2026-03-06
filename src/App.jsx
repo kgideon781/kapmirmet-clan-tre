@@ -5,6 +5,8 @@ import PersonPanel from './components/PersonPanel';
 import ClanStoryPanel from './components/ClanStoryPanel';
 import AddSelfPanel from './components/AddSelfPanel';
 import InvitePanel from './components/InvitePanel';
+import AdminPanel from './components/AdminPanel';
+import LoginPrompt from './components/LoginPrompt';
 import ZoomControls from './components/ZoomControls';
 import TimelineBar from './components/TimelineBar';
 import Legend from './components/Legend';
@@ -15,13 +17,16 @@ export default function App() {
   const svgRef = useRef(null);
   const { zoomLevel, zoomIn, zoomOut, resetView } = useTreeZoom(svgRef, 0.65);
 
-  const [treeData, setTreeData] = useState({ tree: null, seedlings: [], mothersMap: new Map() });
+  const [treeData, setTreeData]     = useState({ tree: null, seedlings: [], mothersMap: new Map() });
+  const [allPeople, setAllPeople]   = useState([]);
   const [selectedPerson, setSelectedPerson] = useState(null);
-  const [activePanel, setActivePanel] = useState(null); // 'story' | 'add' | 'invite' | null
-  const [addContext, setAddContext] = useState(null); // { anchor, relationship }
+  const [activePanel, setActivePanel]       = useState(null);
+  const [addContext, setAddContext]          = useState(null);
+  const [showLogin, setShowLogin]           = useState(false);
 
   const loadTree = useCallback(async () => {
     const people = await fetchPeople();
+    setAllPeople(people);
     setTreeData(buildTree(people));
   }, []);
 
@@ -105,7 +110,7 @@ export default function App() {
       />
 
       {/* Header */}
-      <Header onOpenPanel={handleOpenPanel} />
+      <Header onOpenPanel={handleOpenPanel} allPeople={allPeople} />
 
       {/* Zoom Controls */}
       <ZoomControls
@@ -123,7 +128,7 @@ export default function App() {
 
       {/* Panels */}
       {selectedPerson && (
-        <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} />
+        <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} />
       )}
       {activePanel === 'story' && (
         <ClanStoryPanel onClose={() => setActivePanel(null)} />
@@ -134,6 +139,10 @@ export default function App() {
       {activePanel === 'invite' && (
         <InvitePanel onClose={() => setActivePanel(null)} />
       )}
+      {activePanel === 'admin' && (
+        <AdminPanel onClose={() => setActivePanel(null)} onRefreshTree={loadTree} />
+      )}
+      {showLogin && <LoginPrompt onClose={() => setShowLogin(false)} />}
 
       {/* Click backdrop to close panels */}
       {(selectedPerson || activePanel) && (
@@ -154,16 +163,19 @@ export default function App() {
       {/* Re-render panels above backdrop */}
       <div style={{ position: 'relative', zIndex: 30 }}>
         {selectedPerson && (
-          <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} />
+          <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} />
         )}
         {activePanel === 'story' && (
           <ClanStoryPanel onClose={() => setActivePanel(null)} />
         )}
         {activePanel === 'add' && (
-          <AddSelfPanel onClose={() => setActivePanel(null)} />
+          <AddSelfPanel onClose={() => { setActivePanel(null); setAddContext(null); }} anchor={addContext?.anchor} relationship={addContext?.relationship} onPersonAdded={loadTree} />
         )}
         {activePanel === 'invite' && (
           <InvitePanel onClose={() => setActivePanel(null)} />
+        )}
+        {activePanel === 'admin' && (
+          <AdminPanel onClose={() => setActivePanel(null)} onRefreshTree={loadTree} />
         )}
       </div>
 

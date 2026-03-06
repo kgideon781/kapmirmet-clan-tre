@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { X, Sprout, ArrowRight } from 'lucide-react';
 import { addPerson, updatePerson } from '../lib/db';
+import { useAuth } from '../context/AuthContext';
+import { signInWithGoogle } from '../lib/auth';
 
 // relationship: 'child' | 'mother' | 'father' | 'sibling'
 const RELATIONSHIPS = [
@@ -11,7 +13,27 @@ const RELATIONSHIPS = [
 ];
 
 export default function AddSelfPanel({ onClose, anchor, relationship: initialRel, onPersonAdded }) {
+  const { user } = useAuth();
   const hasAnchor = !!anchor;
+
+  // Not logged in — show login gate
+  if (!user) {
+    return (
+      <div style={panelStyle}>
+        <button onClick={onClose} style={closeBtnStyle}><X size={18} /></button>
+        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <span style={{ fontSize: '40px', display: 'block', marginBottom: '16px' }}>🔐</span>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '18px', color: '#DAA520', margin: '0 0 8px' }}>Sign in to add family</p>
+          <p style={{ fontSize: '12px', color: '#7B6845', fontFamily: 'var(--font-body)', lineHeight: 1.5, margin: '0 0 20px' }}>
+            Additions require a verified identity to keep the clan record trustworthy.
+          </p>
+          <button onClick={signInWithGoogle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '12px', background: '#fff', border: 'none', borderRadius: '10px', color: '#333', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font-body)' }}>
+            Continue with Google
+          </button>
+        </div>
+      </div>
+    );
+  }
   const defaultRel = initialRel || 'child';
 
   const [relationship, setRelationship] = useState(defaultRel);
@@ -119,13 +141,17 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
       {saved ? (
         // ── Success + chain options ──
         <div style={{ animation: 'slideInUp 0.4s var(--ease-out)' }}>
-          <div style={{ textAlign: 'center', padding: '12px 0 20px' }}>
+          <div style={{ textAlign: 'center', padding: '12px 0 16px' }}>
             <span style={{ fontSize: '40px', display: 'block', marginBottom: '10px' }}>🌿</span>
             <p style={{ fontFamily: 'var(--font-display)', fontSize: '18px', color: '#DAA520', margin: '0 0 4px' }}>
-              {saved.name} added!
+              {saved.name} planted!
             </p>
-            <p style={{ fontSize: '12px', color: '#7B6845', fontFamily: 'var(--font-body)' }}>
-              Keep building the tree — add more relatives below.
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: 'rgba(218,165,32,0.1)', border: '1px solid rgba(218,165,32,0.25)', borderRadius: '20px', margin: '6px 0' }}>
+              <span style={{ fontSize: '10px' }}>⏳</span>
+              <span style={{ fontSize: '10.5px', color: '#DAA520', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px' }}>PENDING REVIEW</span>
+            </div>
+            <p style={{ fontSize: '11.5px', color: '#7B6845', fontFamily: 'var(--font-body)', lineHeight: 1.5, margin: '4px 0 0' }}>
+              Visible only to you for now. An elder will verify and publish it to the full tree.
             </p>
           </div>
 

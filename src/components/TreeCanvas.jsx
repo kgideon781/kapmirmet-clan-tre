@@ -250,6 +250,29 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
       .attr('preserveAspectRatio', 'xMidYMid slice')
       .attr('pointer-events', 'none');
 
+    // Pending pulse ring (only the adder sees their own pending nodes via RLS)
+    nodes
+      .filter((d) => d.data.status === 'pending')
+      .append('circle')
+      .attr('class', 'pending-ring')
+      .attr('r', (d) => (d.data.badge === 'founder' ? 38 : d.data.badge ? 28 : 24))
+      .attr('fill', 'none')
+      .attr('stroke', 'rgba(218,165,32,0.6)')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '4,3')
+      .style('animation', 'breathe 2s ease-in-out infinite');
+
+    // ⏳ badge for pending nodes
+    nodes
+      .filter((d) => d.data.status === 'pending')
+      .append('text')
+      .attr('text-anchor', 'middle')
+      .attr('x', (d) => (d.data.badge === 'founder' ? 0 : 18))
+      .attr('y', (d) => (d.data.badge === 'founder' ? -50 : -24))
+      .attr('font-size', '11px')
+      .attr('pointer-events', 'none')
+      .text('⏳');
+
     // Inner icon (gender) — hidden for founder since portrait covers it
     nodes
       .filter((d) => d.data.badge !== 'founder')

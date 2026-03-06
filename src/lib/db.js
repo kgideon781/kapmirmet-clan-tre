@@ -13,13 +13,11 @@ export function buildTree(people) {
   const map = new Map();
   people.forEach((p) => map.set(p.id, { ...p, children: [] }));
 
-  // IDs that are referenced as someone's mother — they don't belong in the main tree
   const motherIds = new Set(people.filter((p) => p.mother_id).map((p) => p.mother_id));
 
   let tree = null;
   const seedlings = [];
-  // fatherId → Map<motherId, motherData>  (for satellite rendering)
-  const mothersMap = new Map();
+  const mothersMap = new Map(); // fatherId → Map<motherId, motherData>
 
   people.forEach((p) => {
     if (p.is_seedling) {
@@ -28,11 +26,9 @@ export function buildTree(people) {
       const parent = map.get(p.parent_id);
       if (parent) {
         const node = map.get(p.id);
-        // Children of female members belong to their father's clan, not Kapmirmet
         if (node && parent.gender === 'F') node.is_maternal = true;
         parent.children.push(node);
       }
-      // Track (father → mother) for satellite rendering
       if (p.mother_id) {
         const motherData = map.get(p.mother_id);
         if (motherData) {
@@ -41,7 +37,7 @@ export function buildTree(people) {
         }
       }
     } else if (!motherIds.has(p.id)) {
-      tree = map.get(p.id); // root / founder
+      tree = map.get(p.id);
     }
   });
 
@@ -59,6 +55,7 @@ export async function addPerson({ name, birth, gender, parentId, notes, clan }) 
       story: notes?.trim() || null,
       clan: clan || 'Kapmirmet',
       is_seedling: !parentId,
+      status: 'pending',        // always pending until a mod verifies
     })
     .select()
     .single();
@@ -75,4 +72,40 @@ export async function updatePerson(id, updates) {
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function verifyPerson(id) {
+  const { error } = await supabase
+    .from('people')
+    .update({ status: 'verified', verified_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function rejectPerson(id) {
+  const { error } = await supabase
+    .from('people')
+    .update({ status: 'rejected' })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function claimProfile(personId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+  const { error } = await supabase
+    .from('people')
+    .update({ claimed: true, claimed_by: user.id })
+    .eq('id', personId);
+  if (error) throw error;
+}
+
+export async function fetchPending() {
+  const { data, error } = await supabase
+    .from('people')
+    .select('*, adder:profiles!added_by(full_name, email, avatar_url)')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
 }
