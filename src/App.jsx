@@ -28,6 +28,11 @@ export default function App() {
     const people = await fetchPeople();
     setAllPeople(people);
     setTreeData(buildTree(people));
+    // Keep the open panel in sync with fresh data
+    setSelectedPerson((prev) => {
+      if (!prev) return null;
+      return people.find((p) => p.id === prev.id) || prev;
+    });
   }, []);
 
   useEffect(() => { loadTree(); }, [loadTree]);
@@ -129,7 +134,7 @@ export default function App() {
 
       {/* Panels */}
       {selectedPerson && (
-        <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} onPersonDeleted={() => { setSelectedPerson(null); setActivePanel(null); loadTree(); }} onPersonUpdated={() => { setSelectedPerson(null); loadTree(); }} />
+        <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} onPersonDeleted={() => { setSelectedPerson(null); setActivePanel(null); loadTree(); }} onPersonUpdated={loadTree} />
       )}
       {activePanel === 'story' && (
         <ClanStoryPanel onClose={() => setActivePanel(null)} />
@@ -164,7 +169,7 @@ export default function App() {
       {/* Re-render panels above backdrop */}
       <div style={{ position: 'relative', zIndex: 30 }}>
         {selectedPerson && (
-          <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} onPersonDeleted={() => { setSelectedPerson(null); setActivePanel(null); loadTree(); }} onPersonUpdated={() => { setSelectedPerson(null); loadTree(); }} />
+          <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} onPersonDeleted={() => { setSelectedPerson(null); setActivePanel(null); loadTree(); }} onPersonUpdated={loadTree} />
         )}
         {activePanel === 'story' && (
           <ClanStoryPanel onClose={() => setActivePanel(null)} />

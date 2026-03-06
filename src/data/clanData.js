@@ -155,11 +155,17 @@ export const seedlings = [
 export const clanTree = founder;
 
 export const BADGE_MAP = {
-  founder:     { icon: '👑', label: 'Founder',          color: '#FFD700' },
-  warrior:     { icon: '🛡️', label: 'Warrior',           color: '#CD7F32' },
-  migration:   { icon: '🧭', label: 'Migration Leader',  color: '#4682B4' },
-  storykeeper: { icon: '📜', label: 'Story Keeper',      color: '#DAA520' },
-  clanbuilder: { icon: '🌱', label: 'Clan Builder',      color: '#6B8E23' },
+  founder:     { icon: '👑', label: 'Founder',           color: '#FFD700', description: 'The founding ancestor of the clan — from whose lineage all members trace their roots.' },
+  warrior:     { icon: '🛡️', label: 'Warrior',            color: '#CD7F32', description: 'A defender of the clan who showed remarkable courage and protected the community in times of conflict.' },
+  migration:   { icon: '🧭', label: 'Migration Leader',   color: '#4682B4', description: 'Led a great journey that expanded the clan\'s reach and established new settlements.' },
+  storykeeper: { icon: '📜', label: 'Story Keeper',       color: '#DAA520', description: 'Preserved the clan\'s oral history, proverbs, and songs — ensuring they survived for future generations.' },
+  clanbuilder: { icon: '🌱', label: 'Clan Builder',       color: '#6B8E23', description: 'Grew the clan\'s strength through wise leadership, alliances, and tireless community building.' },
+  uniter:      { icon: '🤝', label: 'The Uniter',         color: '#C9917B', description: 'A bridge between families and generations — known for resolving conflicts and keeping the clan whole through love and diplomacy.' },
+  historian:   { icon: '📖', label: 'Family Historian',   color: '#9ACD32', description: 'Passionately preserves family memories and stories, and ensures that generations stay connected to their roots and to each other.' },
+  elder:       { icon: '🌿', label: 'Respected Elder',    color: '#A89070', description: 'A voice of wisdom and lived experience whose guidance shaped the family\'s path across many seasons.' },
+  matriarch:   { icon: '🌸', label: 'Matriarch',          color: '#D4A892', description: 'The heart of the family — a pillar of quiet strength, warmth, and love who held everyone together.' },
+  patriarch:   { icon: '⚓', label: 'Patriarch',          color: '#8B8682', description: 'An anchor of strength and stability who provided for and protected the family across generations.' },
+  pioneer:     { icon: '⚡', label: 'Pioneer',            color: '#E8C040', description: 'A trailblazer who opened new paths — in education, work, or life — making it easier for those who followed.' },
 };
 
 export const CLAN_COLORS = {

@@ -134,6 +134,20 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
           });
       });
 
+    // ── Badge tooltip ──
+    const tooltip = d3.select('body').append('div')
+      .style('position', 'fixed')
+      .style('pointer-events', 'none')
+      .style('opacity', '0')
+      .style('transition', 'opacity 0.15s ease')
+      .style('background', 'rgba(13,9,6,0.97)')
+      .style('border', '1px solid rgba(139,105,20,0.5)')
+      .style('border-radius', '10px')
+      .style('padding', '10px 14px')
+      .style('max-width', '220px')
+      .style('z-index', '9999')
+      .style('box-shadow', '0 8px 32px rgba(0,0,0,0.6)');
+
     // ── Branch hover state ──
     const plusMap = new Map();
     let branchHoverTimer = null;
@@ -306,15 +320,34 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
       .text((d) => (d.data.gender === 'F' ? '♀' : '♂'))
       .attr('fill', 'rgba(255,255,255,0.7)');
 
-    // Badge above
+    // Badge above (pointer-events enabled for tooltip)
     nodes
       .filter((d) => d.data.badge)
       .append('text')
       .attr('text-anchor', 'middle')
       .attr('y', (d) => (d.data.badge === 'founder' ? -42 : -30))
       .attr('font-size', (d) => (d.data.badge === 'founder' ? '22px' : '16px'))
-      .attr('pointer-events', 'none')
-      .text((d) => BADGE_MAP[d.data.badge]?.icon || '');
+      .attr('pointer-events', 'all')
+      .style('cursor', 'help')
+      .text((d) => BADGE_MAP[d.data.badge]?.icon || '')
+      .on('mouseenter', function (event, d) {
+        const b = BADGE_MAP[d.data.badge];
+        if (!b?.description) return;
+        tooltip
+          .html(
+            `<div style="font-size:9.5px;color:#A89070;font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px">${b.icon} ${b.label}</div>` +
+            `<div style="font-size:12px;color:#D4C4A8;line-height:1.55;font-family:'Lato',sans-serif">${b.description}</div>`
+          )
+          .style('opacity', '1')
+          .style('left', `${event.clientX + 16}px`)
+          .style('top', `${event.clientY - 20}px`);
+      })
+      .on('mousemove', function (event) {
+        tooltip
+          .style('left', `${event.clientX + 16}px`)
+          .style('top', `${event.clientY - 20}px`);
+      })
+      .on('mouseleave', () => tooltip.style('opacity', '0'));
 
     // Eagle for founder
     nodes
@@ -593,6 +626,7 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
         .text('SEEDLING');
     });
 
+    return () => tooltip.remove();
   }, [svgRef, hierarchy, seedlings, mothersMap, onSelectPerson, onAddPerson]);
 
   // Separate effect: show/hide mother satellites based on zoom level

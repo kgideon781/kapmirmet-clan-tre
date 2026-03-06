@@ -4,11 +4,15 @@ import { BADGE_MAP, CLAN_COLORS } from '../data/clanData';
 import { claimProfile, deletePerson, updatePerson, uploadPersonPhoto } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 
+const BADGE_KEYS = Object.keys(BADGE_MAP);
+
 export default function PersonPanel({ person, onClose, onAddRelative, onLoginRequired, onPersonDeleted, onPersonUpdated }) {
   const { user, isMod, role } = useAuth();
   const isAdmin = role === 'admin';
   const canEdit = isAdmin || isMod || (user && user.id === person?.added_by);
 
+  const [currentBadge, setCurrentBadge] = useState(person?.badge || null);
+  const [settingBadge, setSettingBadge] = useState(false);
   const [claiming, setClaiming]         = useState(false);
   const [claimed, setClaimedLocal]      = useState(false);
   const [deleting, setDeleting]         = useState(false);
@@ -93,6 +97,16 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleSetBadge(badgeKey) {
+    setSettingBadge(badgeKey ?? 'clear');
+    try {
+      await updatePerson(person.id, { badge: badgeKey });
+      setCurrentBadge(badgeKey);
+      onPersonUpdated?.();
+    } catch (e) { console.error(e); }
+    finally { setSettingBadge(false); }
   }
 
   function guardedAdd(rel) {
@@ -263,6 +277,49 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
           {person.status === 'pending' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 10px', background: 'rgba(218,165,32,0.08)', border: '1px solid rgba(218,165,32,0.2)', borderRadius: '8px', fontSize: '11px', color: '#DAA520', fontFamily: 'var(--font-mono)' }}>
               ⏳ Pending verification
+            </div>
+          )}
+
+          {/* Badge assignment — admins/mods only */}
+          {(isAdmin || isMod) && (
+            <div style={{ marginTop: '4px' }}>
+              <p style={{ ...labelStyle, marginBottom: '6px' }}>ASSIGN BADGE</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
+                {BADGE_KEYS.map((key) => {
+                  const b = BADGE_MAP[key];
+                  const active = currentBadge === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => active ? handleSetBadge(null) : handleSetBadge(key)}
+                      title={`${b.label}: ${b.description}`}
+                      disabled={!!settingBadge}
+                      style={{
+                        padding: '7px 4px', textAlign: 'center', borderRadius: '7px', cursor: 'pointer',
+                        background: active ? `${b.color}22` : 'rgba(92,64,51,0.1)',
+                        border: `1px solid ${active ? b.color + '60' : 'rgba(92,64,51,0.25)'}`,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
+                        transition: 'all 0.15s', opacity: settingBadge && !active ? 0.5 : 1,
+                      }}
+                    >
+                      <span style={{ fontSize: '15px', lineHeight: 1 }}>
+                        {settingBadge === key ? '⏳' : b.icon}
+                      </span>
+                      <span style={{ fontSize: '8px', color: active ? b.color : '#6B5A4E', fontFamily: 'var(--font-mono)', lineHeight: 1.1, textAlign: 'center' }}>
+                        {b.label.split(' ')[0]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {currentBadge && (
+                <button
+                  onClick={() => handleSetBadge(null)}
+                  style={{ marginTop: '5px', width: '100%', padding: '5px', background: 'none', border: '1px dashed rgba(92,64,51,0.3)', borderRadius: '6px', color: '#5C4033', cursor: 'pointer', fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px' }}
+                >
+                  {settingBadge === 'clear' ? 'Clearing…' : 'Remove badge'}
+                </button>
+              )}
             </div>
           )}
 
