@@ -118,6 +118,30 @@ export async function deletePerson(id) {
   if (error) throw error;
 }
 
+export async function fetchProfilesWithRoles() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, full_name, avatar_url, created_at, user_roles(role)')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((p) => ({
+    ...p,
+    role: p.user_roles?.[0]?.role || null,
+  }));
+}
+
+export async function setUserRole(userId, role) {
+  // Delete existing first (upsert needs an update policy we don't have)
+  await supabase.from('user_roles').delete().eq('user_id', userId);
+  const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
+  if (error) throw error;
+}
+
+export async function removeUserRole(userId) {
+  const { error } = await supabase.from('user_roles').delete().eq('user_id', userId);
+  if (error) throw error;
+}
+
 export async function fetchPending() {
   const { data, error } = await supabase
     .from('people')
