@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Sprout, ArrowRight, Plus, Minus } from 'lucide-react';
-import { addPerson, updatePerson } from '../lib/db';
+import { addPerson, setPersonParent, setPersonMother } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 import { signInWithGoogle } from '../lib/auth';
 
@@ -106,7 +106,7 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
             name: form.name, birth: form.birth, death: form.death,
             gender: 'F', notes: form.story,
           });
-          await updatePerson(anchor.id, { mother_id: newPerson.id });
+          await setPersonMother(anchor.id, newPerson.id);
           break;
         }
         case 'father': {
@@ -114,7 +114,7 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
             name: form.name, birth: form.birth, death: form.death,
             gender: 'M', notes: form.story,
           });
-          await updatePerson(anchor.id, { parent_id: newPerson.id });
+          await setPersonParent(anchor.id, newPerson.id);
           break;
         }
         default:

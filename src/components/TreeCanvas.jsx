@@ -3,11 +3,13 @@ import * as d3 from 'd3';
 import { BADGE_MAP, CLAN_COLORS } from '../data/clanData';
 import mirmetinImg from '../../assets/generated-image-1772805791740.PNG';
 
-export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, onSelectPerson, onAddPerson, zoomLevel }) {
+export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, onSelectPerson, onAddPerson }) {
   const hierarchy = useMemo(() => {
     if (!clanTree) return null;
     return d3.hierarchy(clanTree, (d) => d.children);
   }, [clanTree]);
+
+  const expandedWives = useRef(new Set());
 
   useEffect(() => {
     if (!svgRef.current || !hierarchy) return;
@@ -405,7 +407,7 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
       .attr('pointer-events', 'none')
       .text((d) => d.data.clan.toUpperCase());
 
-    // ── Mother satellite nodes (revealed at higher zoom) ──
+    // ── Mother / wife satellite nodes (toggled per-node via caret) ──
     if (mothersMap && mothersMap.size > 0) {
       const motherEntries = [];
       hierarchy.descendants().forEach((d) => {
@@ -420,10 +422,10 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
         .data(motherEntries)
         .enter()
         .append('g')
-        .attr('class', 'mother-node')
+        .attr('class', (d) => `mother-node mother-of-${d.node.data.id}`)
         .attr('transform', (d) => `translate(${d.node.x + 52 + d.idx * 36},${d.node.y})`)
-        .style('opacity', 0)
-        .style('pointer-events', 'none')
+        .style('opacity', (d) => expandedWives.current.has(d.node.data.id) ? 1 : 0)
+        .style('pointer-events', (d) => expandedWives.current.has(d.node.data.id) ? 'all' : 'none')
         .style('cursor', 'pointer')
         .on('click', (event, d) => {
           event.stopPropagation();
@@ -464,7 +466,7 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
         .attr('pointer-events', 'none')
         .text('♀');
 
-      // Name (visible only at closer zoom — controlled via .mother-label opacity)
+      // Name label
       motherGroups.append('text')
         .attr('class', 'mother-label')
         .attr('text-anchor', 'middle')
@@ -489,6 +491,64 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
           d3.select(this).select('.mother-hover-ring')
             .transition().duration(300)
             .attr('stroke', 'transparent');
+        });
+
+      // ── Wife caret toggle buttons ──
+      nodes
+        .filter((d) => mothersMap.has(d.data.id))
+        .each(function(d) {
+          const nodeGroup = d3.select(this);
+          const isFounder = d.data.badge === 'founder';
+          const yOffset = isFounder ? 86 : 64;
+          const id = d.data.id;
+          const isExpanded = expandedWives.current.has(id);
+
+          const caret = nodeGroup.append('g')
+            .attr('class', 'wife-caret')
+            .attr('transform', `translate(0, ${yOffset})`)
+            .style('cursor', 'pointer');
+
+          caret.append('rect')
+            .attr('x', -18)
+            .attr('y', -7)
+            .attr('width', 36)
+            .attr('height', 14)
+            .attr('rx', 7)
+            .attr('fill', isExpanded ? 'rgba(201,145,123,0.25)' : 'rgba(201,145,123,0.08)')
+            .attr('stroke', '#C9917B')
+            .attr('stroke-width', 0.75);
+
+          caret.append('text')
+            .attr('class', 'wife-caret-text')
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'central')
+            .attr('font-size', '8px')
+            .attr('fill', '#D4A892')
+            .attr('pointer-events', 'none')
+            .attr('font-family', "'DM Mono', monospace")
+            .text(isExpanded ? '♀ ‹' : '♀ ›');
+
+          caret.on('click', function(event) {
+            event.stopPropagation();
+            const wasExpanded = expandedWives.current.has(id);
+            if (wasExpanded) {
+              expandedWives.current.delete(id);
+            } else {
+              expandedWives.current.add(id);
+            }
+            const nowExpanded = !wasExpanded;
+
+            caret.select('rect')
+              .attr('fill', nowExpanded ? 'rgba(201,145,123,0.25)' : 'rgba(201,145,123,0.08)');
+            caret.select('.wife-caret-text')
+              .text(nowExpanded ? '♀ ‹' : '♀ ›');
+
+            d3.select(svgRef.current).selectAll(`.mother-of-${id}`)
+              .transition()
+              .duration(250)
+              .style('opacity', nowExpanded ? 1 : 0)
+              .style('pointer-events', nowExpanded ? 'all' : 'none');
+          });
         });
     }
 
@@ -628,18 +688,6 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
 
     return () => tooltip.remove();
   }, [svgRef, hierarchy, seedlings, mothersMap, onSelectPerson, onAddPerson]);
-
-  // Separate effect: show/hide mother satellites based on zoom level
-  useEffect(() => {
-    if (!svgRef.current) return;
-    const show = zoomLevel >= 0.9;
-    d3.select(svgRef.current)
-      .selectAll('.mother-node')
-      .transition()
-      .duration(300)
-      .style('opacity', show ? 1 : 0)
-      .style('pointer-events', show ? 'all' : 'none');
-  }, [svgRef, zoomLevel]);
 
   return null; // Rendering is via D3 imperative code
 }

@@ -113,6 +113,22 @@ export async function claimProfile(personId) {
   if (error) throw error;
 }
 
+export async function setPersonParent(anchorId, parentId) {
+  const { error } = await supabase.rpc('set_person_parent', {
+    anchor_id: anchorId,
+    new_parent_id: parentId,
+  });
+  if (error) throw error;
+}
+
+export async function setPersonMother(anchorId, motherId) {
+  const { error } = await supabase.rpc('set_person_mother', {
+    anchor_id: anchorId,
+    new_mother_id: motherId,
+  });
+  if (error) throw error;
+}
+
 export async function deletePersonWithReroute(personId, { action = 'seedling', newParentId = null } = {}) {
   const { error } = await supabase.rpc('delete_person_with_reroute', {
     person_id: personId,

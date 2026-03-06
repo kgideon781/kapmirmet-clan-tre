@@ -3,8 +3,9 @@
 -- Deletion requests + owner edit anytime + safe delete RPC
 -- ═══════════════════════════════════════════════════════════════
 
--- 1. Add deletion_requested_at column
+-- 1. Add any missing columns (mother_id may not exist if schema.sql predates it)
 alter table people
+  add column if not exists mother_id              uuid,
   add column if not exists deletion_requested_at  timestamptz,
   add column if not exists deletion_requested_by  uuid references profiles(id);
 

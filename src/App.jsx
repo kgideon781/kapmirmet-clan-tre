@@ -111,7 +111,6 @@ export default function App() {
         mothersMap={treeData.mothersMap}
         onSelectPerson={handleSelectPerson}
         onAddPerson={handleAddChild}
-        zoomLevel={zoomLevel}
       />
 
       {/* Header */}
