@@ -113,8 +113,30 @@ export async function claimProfile(personId) {
   if (error) throw error;
 }
 
-export async function deletePerson(id) {
-  const { error } = await supabase.from('people').delete().eq('id', id);
+export async function deletePersonWithReroute(personId, { action = 'seedling', newParentId = null } = {}) {
+  const { error } = await supabase.rpc('delete_person_with_reroute', {
+    person_id: personId,
+    descendant_action: action,
+    new_parent_id: newParentId,
+  });
+  if (error) throw error;
+}
+
+export async function requestDeletion(personId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+  const { error } = await supabase.from('people').update({
+    deletion_requested_at: new Date().toISOString(),
+    deletion_requested_by: user.id,
+  }).eq('id', personId);
+  if (error) throw error;
+}
+
+export async function denyDeletionRequest(personId) {
+  const { error } = await supabase.from('people').update({
+    deletion_requested_at: null,
+    deletion_requested_by: null,
+  }).eq('id', personId);
   if (error) throw error;
 }
 
@@ -143,11 +165,21 @@ export async function removeUserRole(userId) {
 }
 
 export async function fetchPending() {
-  const { data, error } = await supabase
-    .from('people')
-    .select('*, adder:profiles!added_by(full_name, email, avatar_url)')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: true });
-  if (error) throw error;
-  return data ?? [];
+  const [pendingRes, deletionRes] = await Promise.all([
+    supabase.from('people')
+      .select('*, adder:profiles!added_by(full_name, email, avatar_url)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true }),
+    supabase.from('people')
+      .select('*, adder:profiles!added_by(full_name, email, avatar_url), requester:profiles!deletion_requested_by(full_name, email)')
+      .not('deletion_requested_at', 'is', null)
+      .order('deletion_requested_at', { ascending: true }),
+  ]);
+  if (pendingRes.error) throw pendingRes.error;
+  if (deletionRes.error) throw deletionRes.error;
+  const pending = (pendingRes.data ?? []).map((p) => ({ ...p, _queueType: 'pending' }));
+  const deletions = (deletionRes.data ?? [])
+    .filter((d) => !pending.find((p) => p.id === d.id))
+    .map((p) => ({ ...p, _queueType: 'deletion' }));
+  return [...pending, ...deletions];
 }

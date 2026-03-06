@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { X, Check, XCircle, Clock, ShieldCheck, ShieldOff, Users } from 'lucide-react';
-import { fetchPending, verifyPerson, rejectPerson, fetchProfilesWithRoles, setUserRole, removeUserRole } from '../lib/db';
+import { X, Check, XCircle, Clock, ShieldCheck, ShieldOff, Users, Trash2 } from 'lucide-react';
+import { fetchPending, verifyPerson, rejectPerson, fetchProfilesWithRoles, setUserRole, removeUserRole, deletePersonWithReroute, denyDeletionRequest } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminPanel({ onClose, onRefreshTree }) {
@@ -74,7 +74,21 @@ function QueueTab({ onRefreshTree }) {
     onRefreshTree();
   }
 
+  async function handleApproveDeletion(id) {
+    await deletePersonWithReroute(id, { action: 'seedling' });
+    setQueue((q) => q.filter((p) => p.id !== id));
+    onRefreshTree();
+  }
+
+  async function handleDenyDeletion(id) {
+    await denyDeletionRequest(id);
+    setQueue((q) => q.filter((p) => p.id !== id));
+  }
+
   if (loading) return <p style={{ color: '#7B6845', fontFamily: 'var(--font-body)', fontSize: '13px' }}>Loading…</p>;
+
+  const pending   = queue.filter((p) => p._queueType === 'pending');
+  const deletions = queue.filter((p) => p._queueType === 'deletion');
 
   if (queue.length === 0) return (
     <div style={{ textAlign: 'center', padding: '40px 0', color: '#7B6845' }}>
@@ -84,47 +98,82 @@ function QueueTab({ onRefreshTree }) {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <p style={{ fontSize: '11.5px', color: '#7B6845', fontFamily: 'var(--font-body)', margin: '0 0 4px' }}>{queue.length} pending</p>
-      {queue.map((person) => (
-        <div key={person.id} style={cardStyle}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
-            <span style={{ fontSize: '22px', lineHeight: 1 }}>{person.gender === 'F' ? '♀' : '♂'}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: '14px', fontFamily: 'var(--font-display)', color: '#E8DCC8', fontWeight: 400 }}>{person.name}</p>
-              <p style={{ margin: '2px 0 0', fontSize: '10.5px', color: '#7B6845', fontFamily: 'var(--font-mono)' }}>
-                {person.birth ? `b. ${person.birth}` : 'birth unknown'}
-                {person.death ? ` – ${person.death}` : ''}
-                {person.clan && person.clan !== 'Kapmirmet' ? ` · ${person.clan}` : ''}
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-              <Clock size={10} style={{ color: '#7B6845' }} />
-              <span style={{ fontSize: '9.5px', color: '#7B6845', fontFamily: 'var(--font-mono)' }}>
-                {new Date(person.created_at).toLocaleDateString()}
-              </span>
-            </div>
-          </div>
-          {person.story && (
-            <p style={{ fontSize: '12px', color: '#A89070', fontFamily: 'var(--font-body)', fontStyle: 'italic', margin: '0 0 8px', lineHeight: 1.5, borderLeft: '2px solid rgba(92,64,51,0.4)', paddingLeft: '8px' }}>
-              {person.story}
-            </p>
-          )}
-          {person.adder && (
-            <p style={{ fontSize: '10px', color: '#5C4033', fontFamily: 'var(--font-mono)', margin: '0 0 10px' }}>
-              Added by {person.adder.full_name || person.adder.email}
-            </p>
-          )}
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button onClick={() => handleVerify(person.id)} style={verifyBtnStyle}>
-              <Check size={13} /> Verify
-            </button>
-            <button onClick={() => handleReject(person.id)} style={rejectBtnStyle}>
-              <XCircle size={13} /> Reject
-            </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Pending additions */}
+      {pending.length > 0 && (
+        <div>
+          <p style={{ fontSize: '10px', color: '#A89070', fontFamily: 'var(--font-mono)', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 8px' }}>
+            {pending.length} pending addition{pending.length !== 1 ? 's' : ''}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {pending.map((person) => (
+              <div key={person.id} style={cardStyle}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '22px', lineHeight: 1 }}>{person.gender === 'F' ? '♀' : '♂'}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: '14px', fontFamily: 'var(--font-display)', color: '#E8DCC8', fontWeight: 400 }}>{person.name}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '10.5px', color: '#7B6845', fontFamily: 'var(--font-mono)' }}>
+                      {person.birth ? `b. ${person.birth}` : 'birth unknown'}
+                      {person.death ? ` – ${person.death}` : ''}
+                      {person.clan && person.clan !== 'Kapmirmet' ? ` · ${person.clan}` : ''}
+                    </p>
+                  </div>
+                  <span style={{ fontSize: '9.5px', color: '#7B6845', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>
+                    {new Date(person.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                {person.story && <p style={{ fontSize: '12px', color: '#A89070', fontFamily: 'var(--font-body)', fontStyle: 'italic', margin: '0 0 8px', lineHeight: 1.5, borderLeft: '2px solid rgba(92,64,51,0.4)', paddingLeft: '8px' }}>{person.story}</p>}
+                {person.adder && <p style={{ fontSize: '10px', color: '#5C4033', fontFamily: 'var(--font-mono)', margin: '0 0 10px' }}>Added by {person.adder.full_name || person.adder.email}</p>}
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button onClick={() => handleVerify(person.id)} style={verifyBtnStyle}><Check size={13} /> Verify</button>
+                  <button onClick={() => handleReject(person.id)} style={rejectBtnStyle}><XCircle size={13} /> Reject</button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      ))}
+      )}
+
+      {/* Deletion requests */}
+      {deletions.length > 0 && (
+        <div>
+          <p style={{ fontSize: '10px', color: '#e05555', fontFamily: 'var(--font-mono)', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 8px' }}>
+            {deletions.length} deletion request{deletions.length !== 1 ? 's' : ''}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {deletions.map((person) => (
+              <div key={person.id} style={{ ...cardStyle, borderColor: 'rgba(224,85,85,0.25)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '22px', lineHeight: 1 }}>{person.gender === 'F' ? '♀' : '♂'}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: '14px', fontFamily: 'var(--font-display)', color: '#E8DCC8', fontWeight: 400 }}>{person.name}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '10.5px', color: '#7B6845', fontFamily: 'var(--font-mono)' }}>
+                      {person.birth ? `b. ${person.birth}` : 'birth unknown'}
+                      {person.death ? ` – ${person.death}` : ''}
+                    </p>
+                  </div>
+                </div>
+                {person.requester && (
+                  <p style={{ fontSize: '10px', color: '#e05555', fontFamily: 'var(--font-mono)', margin: '0 0 10px' }}>
+                    Requested by {person.requester.full_name || person.requester.email} · {new Date(person.deletion_requested_at).toLocaleDateString()}
+                  </p>
+                )}
+                <p style={{ fontSize: '10.5px', color: '#7B6845', fontFamily: 'var(--font-body)', margin: '0 0 10px', lineHeight: 1.4 }}>
+                  Children will become seedlings. For other rerouting, find them in the tree.
+                </p>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button onClick={() => handleApproveDeletion(person.id)} style={{ ...rejectBtnStyle, gap: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Trash2 size={13} /> Approve & Delete
+                  </button>
+                  <button onClick={() => handleDenyDeletion(person.id)} style={verifyBtnStyle}>
+                    <XCircle size={13} /> Deny
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
