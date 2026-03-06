@@ -59,6 +59,15 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
     defs.append('clipPath').attr('id', 'founderClip')
       .append('circle').attr('r', 28);
 
+    // Clip paths for person photos
+    hierarchy.descendants().forEach((d) => {
+      if (d.data.photo_url) {
+        const r = d.data.badge === 'founder' ? 28 : d.data.badge ? 19 : 15;
+        defs.append('clipPath').attr('id', `photo-clip-${d.data.id}`)
+          .append('circle').attr('r', r);
+      }
+    });
+
     // ── Layout ──
     const treeLayout = d3.tree()
       .nodeSize([90, 140])
@@ -236,6 +245,19 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
         if (d.data.badge) return 'url(#glow)';
         return 'url(#nodeShadow)';
       });
+
+    // Person photo thumbnails (non-founder — founder has its own below)
+    nodes
+      .filter((d) => d.data.photo_url && d.data.badge !== 'founder')
+      .append('image')
+      .attr('href', (d) => d.data.photo_url)
+      .attr('x', (d) => -(d.data.badge ? 19 : 15))
+      .attr('y', (d) => -(d.data.badge ? 19 : 15))
+      .attr('width', (d) => (d.data.badge ? 38 : 30))
+      .attr('height', (d) => (d.data.badge ? 38 : 30))
+      .attr('clip-path', (d) => `url(#photo-clip-${d.data.id})`)
+      .attr('preserveAspectRatio', 'xMidYMid slice')
+      .attr('pointer-events', 'none');
 
     // Founder portrait image
     nodes

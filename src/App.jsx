@@ -114,6 +114,7 @@ export default function App() {
 
       {/* Zoom Controls */}
       <ZoomControls
+        svgRef={svgRef}
         zoomLevel={zoomLevel}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
@@ -128,7 +129,7 @@ export default function App() {
 
       {/* Panels */}
       {selectedPerson && (
-        <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} onPersonDeleted={() => { setSelectedPerson(null); setActivePanel(null); loadTree(); }} />
+        <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} onPersonDeleted={() => { setSelectedPerson(null); setActivePanel(null); loadTree(); }} onPersonUpdated={() => { setSelectedPerson(null); loadTree(); }} />
       )}
       {activePanel === 'story' && (
         <ClanStoryPanel onClose={() => setActivePanel(null)} />
@@ -163,7 +164,7 @@ export default function App() {
       {/* Re-render panels above backdrop */}
       <div style={{ position: 'relative', zIndex: 30 }}>
         {selectedPerson && (
-          <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} onPersonDeleted={() => { setSelectedPerson(null); setActivePanel(null); loadTree(); }} />
+          <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} onPersonDeleted={() => { setSelectedPerson(null); setActivePanel(null); loadTree(); }} onPersonUpdated={() => { setSelectedPerson(null); loadTree(); }} />
         )}
         {activePanel === 'story' && (
           <ClanStoryPanel onClose={() => setActivePanel(null)} />

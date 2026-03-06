@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { X, Sprout, ArrowRight } from 'lucide-react';
+import { X, Sprout, ArrowRight, Plus, Minus } from 'lucide-react';
 import { addPerson, updatePerson } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 import { signInWithGoogle } from '../lib/auth';
 
-// relationship: 'child' | 'mother' | 'father' | 'sibling'
 const RELATIONSHIPS = [
   { key: 'child',   label: (a) => `Child of ${a}`,   defaultGender: null },
   { key: 'sibling', label: (a) => `Sibling of ${a}`,  defaultGender: null },
@@ -12,11 +11,16 @@ const RELATIONSHIPS = [
   { key: 'father',  label: (a) => `Father of ${a}`,   defaultGender: 'M'  },
 ];
 
+function genderForRelationship(rel) {
+  if (rel === 'mother') return 'F';
+  if (rel === 'father') return 'M';
+  return 'M';
+}
+
 export default function AddSelfPanel({ onClose, anchor, relationship: initialRel, onPersonAdded }) {
   const { user } = useAuth();
   const hasAnchor = !!anchor;
 
-  // Not logged in — show login gate
   if (!user) {
     return (
       <div style={panelStyle}>
@@ -34,20 +38,24 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
       </div>
     );
   }
+
   const defaultRel = initialRel || 'child';
 
   const [relationship, setRelationship] = useState(defaultRel);
   const [form, setForm] = useState({
     name: '',
     birth: '',
+    death: '',
     gender: genderForRelationship(defaultRel),
     story: '',
     clan: '',
   });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState(null);
-  const [saved, setSaved]   = useState(null); // the newly created person
-  const [chain, setChain]   = useState(null); // { anchor, relationship } for chaining
+  const [children, setChildren]         = useState([]);
+  const [showChildren, setShowChildren] = useState(false);
+  const [saving, setSaving]             = useState(false);
+  const [error, setError]               = useState(null);
+  const [saved, setSaved]               = useState(null);
+  const [chain, setChain]               = useState(null);
 
   const update = (key, val) => setForm((p) => ({ ...p, [key]: val }));
 
@@ -55,6 +63,20 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
     setRelationship(rel);
     const g = genderForRelationship(rel);
     if (g) update('gender', g);
+  }
+
+  function addChildRow() {
+    setShowChildren(true);
+    setChildren((prev) => [...prev, { id: Date.now(), name: '', birth: '', death: '', gender: 'M' }]);
+  }
+
+  function updateChild(id, key, val) {
+    setChildren((prev) => prev.map((c) => (c.id === id ? { ...c, [key]: val } : c)));
+  }
+
+  function removeChild(id) {
+    setChildren((prev) => prev.filter((c) => c.id !== id));
+    if (children.length <= 1) setShowChildren(false);
   }
 
   async function handleSubmit() {
@@ -66,7 +88,7 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
       switch (relationship) {
         case 'child':
           newPerson = await addPerson({
-            name: form.name, birth: form.birth,
+            name: form.name, birth: form.birth, death: form.death,
             gender: form.gender, notes: form.story,
             parentId: anchor?.id || null,
             clan: form.clan || undefined,
@@ -74,14 +96,14 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
           break;
         case 'sibling':
           newPerson = await addPerson({
-            name: form.name, birth: form.birth,
+            name: form.name, birth: form.birth, death: form.death,
             gender: form.gender, notes: form.story,
             parentId: anchor?.parent_id || null,
           });
           break;
         case 'mother': {
           newPerson = await addPerson({
-            name: form.name, birth: form.birth,
+            name: form.name, birth: form.birth, death: form.death,
             gender: 'F', notes: form.story,
           });
           await updatePerson(anchor.id, { mother_id: newPerson.id });
@@ -89,7 +111,7 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
         }
         case 'father': {
           newPerson = await addPerson({
-            name: form.name, birth: form.birth,
+            name: form.name, birth: form.birth, death: form.death,
             gender: 'M', notes: form.story,
           });
           await updatePerson(anchor.id, { parent_id: newPerson.id });
@@ -97,29 +119,39 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
         }
         default:
           newPerson = await addPerson({
-            name: form.name, birth: form.birth,
+            name: form.name, birth: form.birth, death: form.death,
             gender: form.gender, notes: form.story,
           });
       }
+
+      // Create any inline children
+      for (const child of children) {
+        if (!child.name.trim()) continue;
+        await addPerson({
+          name: child.name, birth: child.birth, death: child.death,
+          gender: child.gender, parentId: newPerson.id,
+        });
+      }
+
       setSaved(newPerson);
       onPersonAdded?.();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
   }
 
-  // After saving, user can chain to another add
   function startChain(chainRel) {
     setChain({ anchor: saved, relationship: chainRel });
     setSaved(null);
-    setForm({ name: '', birth: '', gender: genderForRelationship(chainRel), story: '', clan: '' });
+    setForm({ name: '', birth: '', death: '', gender: genderForRelationship(chainRel), story: '', clan: '' });
     setRelationship(chainRel);
+    setChildren([]);
+    setShowChildren(false);
     setError(null);
   }
 
-  // Sync effective anchor for display
   const effectiveAnchor = chain ? chain.anchor : anchor;
 
   return (
@@ -139,7 +171,6 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
       </div>
 
       {saved ? (
-        // ── Success + chain options ──
         <div style={{ animation: 'slideInUp 0.4s var(--ease-out)' }}>
           <div style={{ textAlign: 'center', padding: '12px 0 16px' }}>
             <span style={{ fontSize: '40px', display: 'block', marginBottom: '10px' }}>🌿</span>
@@ -170,16 +201,14 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
               </button>
             ))}
           </div>
-
           <button onClick={onClose} style={{ ...chainBtnStyle, marginTop: '10px', color: '#7B6845', borderColor: 'rgba(92,64,51,0.2)' }}>
             Done for now
           </button>
         </div>
       ) : (
-        // ── Form ──
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-          {/* Relationship selector (only when anchor exists) */}
+          {/* Relationship selector */}
           {hasAnchor && (
             <div>
               <label style={labelStyle}>RELATIONSHIP TO {(effectiveAnchor?.name || anchor?.name || '').toUpperCase()}</label>
@@ -194,12 +223,8 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
                       border: `1px solid ${relationship === key ? 'rgba(218,165,32,0.45)' : 'rgba(92,64,51,0.35)'}`,
                       borderRadius: '8px',
                       color: relationship === key ? '#DAA520' : '#A89070',
-                      cursor: 'pointer',
-                      fontSize: '11.5px',
-                      fontFamily: 'var(--font-body)',
-                      fontWeight: 500,
-                      transition: 'all 0.2s',
-                      textAlign: 'center',
+                      cursor: 'pointer', fontSize: '11.5px', fontFamily: 'var(--font-body)',
+                      fontWeight: 500, transition: 'all 0.2s', textAlign: 'center',
                     }}
                   >
                     {label(effectiveAnchor?.name.split(' ')[0] || anchor?.name?.split(' ')[0] || 'them')}
@@ -215,9 +240,14 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
           )}
 
           <Field label="Full Name" value={form.name} onChange={(v) => update('name', v)} placeholder="e.g. Kiprotich Korir" required />
-          <Field label="Year of Birth" value={form.birth} onChange={(v) => update('birth', v)} placeholder="e.g. 1985" />
 
-          {/* Gender (locked for mother/father) */}
+          {/* Birth + Death side by side */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <Field label="Year of Birth" value={form.birth} onChange={(v) => update('birth', v)} placeholder="e.g. 1942" />
+            <Field label="Year of Death" value={form.death} onChange={(v) => update('death', v)} placeholder="e.g. 2001" hint="Leave blank if living" />
+          </div>
+
+          {/* Gender */}
           <div>
             <label style={labelStyle}>Gender</label>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -246,25 +276,88 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
             </div>
           </div>
 
-          {/* Clan field — shown when adding a child to a female node */}
+          {/* Clan field for child of female */}
           {relationship === 'child' && (effectiveAnchor ?? anchor)?.gender === 'F' && (
             <div>
-              <Field
-                label="Father's Clan"
-                value={form.clan}
-                onChange={(v) => update('clan', v)}
-                placeholder="e.g. Kipkenda, Kapchemulwo…"
-              />
+              <Field label="Father's Clan" value={form.clan} onChange={(v) => update('clan', v)} placeholder="e.g. Kipkenda, Kapchemulwo…" />
               <p style={{ fontSize: '10.5px', color: '#7B6845', fontFamily: 'var(--font-body)', margin: '4px 0 0', lineHeight: 1.4 }}>
-                Their children follow their father's lineage. They'll appear in the tree with a dashed branch.
+                Their children follow their father's lineage.
               </p>
             </div>
           )}
 
           <Field label="Their Story / Notes" value={form.story} onChange={(v) => update('story', v)} placeholder="Any details about their life or lineage…" multiline />
 
+          {/* ── Children section ── */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showChildren ? '8px' : '0' }}>
+              <label style={labelStyle}>THEIR CHILDREN</label>
+              <button
+                onClick={addChildRow}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#8B6914', cursor: 'pointer', fontSize: '11px', fontFamily: 'var(--font-mono)', padding: '2px 0' }}
+              >
+                <Plus size={11} /> Add child
+              </button>
+            </div>
+
+            {showChildren && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {children.map((child, i) => (
+                  <div key={child.id} style={childCardStyle}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '10px', color: '#A89070', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>Child {i + 1}</span>
+                      <button onClick={() => removeChild(child.id)} style={{ background: 'none', border: 'none', color: '#5C4033', cursor: 'pointer', padding: '0', display: 'flex' }}>
+                        <Minus size={13} />
+                      </button>
+                    </div>
+                    <input
+                      placeholder="Full name"
+                      value={child.name}
+                      onChange={(e) => updateChild(child.id, 'name', e.target.value)}
+                      style={miniInputStyle}
+                    />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '6px', marginTop: '6px', alignItems: 'center' }}>
+                      <input
+                        placeholder="Born"
+                        value={child.birth}
+                        onChange={(e) => updateChild(child.id, 'birth', e.target.value)}
+                        style={miniInputStyle}
+                      />
+                      <input
+                        placeholder="Died"
+                        value={child.death}
+                        onChange={(e) => updateChild(child.id, 'death', e.target.value)}
+                        style={miniInputStyle}
+                      />
+                      {['M', 'F'].map((g) => (
+                        <button
+                          key={g}
+                          onClick={() => updateChild(child.id, 'gender', g)}
+                          style={{
+                            padding: '6px 8px', borderRadius: '6px', cursor: 'pointer',
+                            background: child.gender === g ? 'rgba(218,165,32,0.15)' : 'rgba(92,64,51,0.15)',
+                            border: `1px solid ${child.gender === g ? 'rgba(218,165,32,0.4)' : 'rgba(92,64,51,0.3)'}`,
+                            color: child.gender === g ? '#DAA520' : '#7B6845',
+                            fontSize: '12px', fontFamily: 'var(--font-body)',
+                          }}
+                        >
+                          {g === 'M' ? '♂' : '♀'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <button onClick={addChildRow} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px', background: 'rgba(92,64,51,0.1)', border: '1px dashed rgba(92,64,51,0.3)', borderRadius: '8px', color: '#7B6845', cursor: 'pointer', fontSize: '11.5px', fontFamily: 'var(--font-body)' }}>
+                  <Plus size={12} /> Add another child
+                </button>
+              </div>
+            )}
+          </div>
+
           {error && (
-            <p style={{ color: '#e05555', fontSize: '12px', margin: 0, fontFamily: 'var(--font-body)' }}>{error}</p>
+            <p style={{ color: '#e05555', fontSize: '12px', margin: 0, fontFamily: 'var(--font-body)', padding: '8px 12px', background: 'rgba(224,85,85,0.08)', border: '1px solid rgba(224,85,85,0.2)', borderRadius: '8px' }}>
+              {error}
+            </p>
           )}
 
           <button
@@ -291,13 +384,7 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
   );
 }
 
-function genderForRelationship(rel) {
-  if (rel === 'mother') return 'F';
-  if (rel === 'father') return 'M';
-  return 'M';
-}
-
-function Field({ label, value, onChange, placeholder, required, multiline }) {
+function Field({ label, value, onChange, placeholder, required, multiline, hint }) {
   const Tag = multiline ? 'textarea' : 'input';
   return (
     <div>
@@ -322,6 +409,7 @@ function Field({ label, value, onChange, placeholder, required, multiline }) {
         onFocus={(e) => (e.target.style.borderColor = '#8B6914')}
         onBlur={(e) => (e.target.style.borderColor = 'rgba(92,64,51,0.4)')}
       />
+      {hint && <p style={{ fontSize: '10px', color: '#5C4033', fontFamily: 'var(--font-mono)', margin: '3px 0 0' }}>{hint}</p>}
     </div>
   );
 }
@@ -332,27 +420,32 @@ const labelStyle = {
   marginBottom: '5px', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px',
   textTransform: 'uppercase',
 };
-
 const titleStyle = {
   fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 400,
   color: '#DAA520', margin: '10px 0 4px',
 };
-
 const subtitleStyle = {
   fontSize: '12px', color: '#7B6845', fontFamily: 'var(--font-body)',
   maxWidth: '280px', margin: '0 auto', lineHeight: 1.5,
 };
-
 const chainBtnStyle = {
   display: 'flex', alignItems: 'center', gap: '8px',
   width: '100%', padding: '10px 14px',
-  background: 'rgba(92,64,51,0.15)',
-  border: '1px solid rgba(92,64,51,0.35)',
+  background: 'rgba(92,64,51,0.15)', border: '1px solid rgba(92,64,51,0.35)',
   borderRadius: '8px', color: '#D4C4A8', cursor: 'pointer',
   fontSize: '12.5px', fontFamily: 'var(--font-body)', fontWeight: 500,
   transition: 'all 0.2s', textAlign: 'left',
 };
-
+const childCardStyle = {
+  background: 'rgba(92,64,51,0.1)', border: '1px solid rgba(92,64,51,0.25)',
+  borderRadius: '8px', padding: '10px',
+};
+const miniInputStyle = {
+  width: '100%', background: 'rgba(92,64,51,0.2)',
+  border: '1px solid rgba(92,64,51,0.35)', borderRadius: '6px',
+  padding: '7px 10px', color: '#E8DCC8', fontSize: '12px',
+  fontFamily: 'var(--font-body)', outline: 'none', boxSizing: 'border-box',
+};
 const panelStyle = {
   position: 'absolute', top: 0, right: 0, width: '380px', maxWidth: '100vw',
   height: '100%',
@@ -362,7 +455,6 @@ const panelStyle = {
   animation: 'slideInRight 0.35s var(--ease-out)',
   boxShadow: '-20px 0 60px rgba(0,0,0,0.5)',
 };
-
 const closeBtnStyle = {
   position: 'absolute', top: '14px', right: '14px',
   background: 'rgba(92,64,51,0.3)', border: '1px solid rgba(92,64,51,0.5)',

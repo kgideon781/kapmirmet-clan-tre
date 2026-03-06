@@ -44,23 +44,36 @@ export function buildTree(people) {
   return { tree, seedlings, mothersMap };
 }
 
-export async function addPerson({ name, birth, gender, parentId, notes, clan }) {
+export async function addPerson({ name, birth, death, gender, parentId, notes, clan }) {
   const { data, error } = await supabase
     .from('people')
     .insert({
       name: name.trim(),
       birth: birth ? parseInt(birth, 10) : null,
+      death: death ? parseInt(death, 10) : null,
       gender,
       parent_id: parentId || null,
       story: notes?.trim() || null,
       clan: clan || 'Kapmirmet',
       is_seedling: !parentId,
-      status: 'pending',        // always pending until a mod verifies
+      status: 'pending',
     })
     .select()
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function uploadPersonPhoto(personId, file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const path = `${personId}.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from('person-photos')
+    .upload(path, file, { upsert: true, contentType: file.type });
+  if (upErr) throw upErr;
+  const { data } = supabase.storage.from('person-photos').getPublicUrl(path);
+  await updatePerson(personId, { photo_url: data.publicUrl });
+  return data.publicUrl;
 }
 
 export async function updatePerson(id, updates) {
