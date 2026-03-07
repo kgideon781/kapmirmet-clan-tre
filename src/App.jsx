@@ -42,14 +42,14 @@ export default function App() {
     setSelectedPerson(person);
   }, []);
 
-  const handleAddRelative = useCallback((anchor, relationship = 'child') => {
+  const handleAddRelative = useCallback((anchor, relationship = 'child', insertBefore = null) => {
     setSelectedPerson(null);
-    setAddContext({ anchor, relationship });
+    setAddContext({ anchor, relationship, insertBefore });
     setActivePanel('add');
   }, []);
 
   const handleAddChild = useCallback(
-    (anchor) => handleAddRelative(anchor, 'child'),
+    (anchor, insertBefore) => handleAddRelative(anchor, 'child', insertBefore ?? null),
     [handleAddRelative]
   );
 
@@ -139,7 +139,7 @@ export default function App() {
         <ClanStoryPanel onClose={() => setActivePanel(null)} />
       )}
       {activePanel === 'add' && (
-        <AddSelfPanel onClose={() => { setActivePanel(null); setAddContext(null); }} anchor={addContext?.anchor} relationship={addContext?.relationship} onPersonAdded={loadTree} allPeople={allPeople} />
+        <AddSelfPanel onClose={() => { setActivePanel(null); setAddContext(null); }} anchor={addContext?.anchor} relationship={addContext?.relationship} insertBefore={addContext?.insertBefore} onPersonAdded={loadTree} allPeople={allPeople} />
       )}
       {activePanel === 'invite' && (
         <InvitePanel onClose={() => setActivePanel(null)} />
@@ -174,7 +174,7 @@ export default function App() {
           <ClanStoryPanel onClose={() => setActivePanel(null)} />
         )}
         {activePanel === 'add' && (
-          <AddSelfPanel onClose={() => { setActivePanel(null); setAddContext(null); }} anchor={addContext?.anchor} relationship={addContext?.relationship} onPersonAdded={loadTree} allPeople={allPeople} />
+          <AddSelfPanel onClose={() => { setActivePanel(null); setAddContext(null); }} anchor={addContext?.anchor} relationship={addContext?.relationship} insertBefore={addContext?.insertBefore} onPersonAdded={loadTree} allPeople={allPeople} />
         )}
         {activePanel === 'invite' && (
           <InvitePanel onClose={() => setActivePanel(null)} />

@@ -17,7 +17,7 @@ function genderForRelationship(rel) {
   return 'M';
 }
 
-export default function AddSelfPanel({ onClose, anchor, relationship: initialRel, onPersonAdded, allPeople }) {
+export default function AddSelfPanel({ onClose, anchor, relationship: initialRel, onPersonAdded, allPeople, insertBefore }) {
   const { user } = useAuth();
   const hasAnchor = !!anchor;
 
@@ -142,6 +142,11 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
           });
       }
 
+      // If inserting between two nodes, reparent the lower node to the new person
+      if (insertBefore && relationship === 'child') {
+        await setPersonParent(insertBefore.id, newPerson.id);
+      }
+
       // Create any inline children
       for (const child of children) {
         if (!child.name.trim()) continue;
@@ -213,7 +218,9 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
           {effectiveAnchor ? `${effectiveAnchor.name}'s Family` : 'Plant Yourself on the Tree'}
         </h2>
         <p style={subtitleStyle}>
-          {effectiveAnchor
+          {insertBefore
+            ? `Will be placed between ${effectiveAnchor?.name?.split(' ')[0]} and ${insertBefore.name.split(' ')[0]}.`
+            : effectiveAnchor
             ? 'Choose a relationship and fill in their details.'
             : "Add yourself even if you don't know your exact branch yet."}
         </p>

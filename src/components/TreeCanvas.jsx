@@ -592,7 +592,7 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
       })
       .on('click', function (event, d) {
         event.stopPropagation();
-        onAddPerson(d.source.data);
+        onAddPerson(d.source.data, d.target.data);
       });
 
     // ── SEEDLINGS (floating) ──
