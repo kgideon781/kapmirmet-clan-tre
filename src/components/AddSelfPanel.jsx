@@ -602,6 +602,7 @@ const panelStyle = {
   zIndex: 30, overflowY: 'auto', padding: '20px', boxSizing: 'border-box',
   animation: 'slideInRight 0.35s var(--ease-out)',
   boxShadow: '-20px 0 60px rgba(0,0,0,0.5)',
+  pointerEvents: 'auto',
 };
 const closeBtnStyle = {
   position: 'absolute', top: '14px', right: '14px',

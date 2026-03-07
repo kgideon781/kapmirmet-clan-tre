@@ -581,7 +581,7 @@ function EField({ label, value, onChange, placeholder, required, multiline }) {
   );
 }
 
-const panelStyle = { position: 'absolute', top: 0, right: 0, width: '380px', maxWidth: '100vw', height: '100%', background: 'linear-gradient(180deg, #0D0906 0%, #1A120B 50%, #2C1810 100%)', borderLeft: '1px solid rgba(92,64,51,0.5)', zIndex: 30, overflowY: 'auto', padding: '20px', boxSizing: 'border-box', animation: 'slideInRight 0.35s var(--ease-out)', boxShadow: '-20px 0 60px rgba(0,0,0,0.5)' };
+const panelStyle = { position: 'absolute', top: 0, right: 0, width: '380px', maxWidth: '100vw', height: '100%', background: 'linear-gradient(180deg, #0D0906 0%, #1A120B 50%, #2C1810 100%)', borderLeft: '1px solid rgba(92,64,51,0.5)', zIndex: 30, overflowY: 'auto', padding: '20px', boxSizing: 'border-box', animation: 'slideInRight 0.35s var(--ease-out)', boxShadow: '-20px 0 60px rgba(0,0,0,0.5)', pointerEvents: 'auto' };
 const iconBtnStyle = { background: 'rgba(92,64,51,0.3)', border: '1px solid rgba(92,64,51,0.5)', borderRadius: '6px', padding: '6px', color: '#A89070', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' };
 const storyBlockStyle = { padding: '14px', background: 'rgba(92,64,51,0.12)', borderRadius: '10px', borderLeft: '3px solid #DAA520' };
 const childRowStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', background: 'rgba(92,64,51,0.1)', borderRadius: '6px' };
