@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { X, UserPlus, Camera, MessageCircle, Send, Check, Loader, Trash2, Pencil, Flag } from 'lucide-react';
 import { BADGE_MAP, CLAN_COLORS } from '../data/clanData';
-import { claimProfile, deletePersonWithReroute, requestDeletion, updatePerson, uploadPersonPhoto } from '../lib/db';
+import { claimProfile, deletePersonWithReroute, requestDeletion, updatePerson, uploadPersonPhoto, setPersonParent, setPersonMother } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 
 const BADGE_KEYS = Object.keys(BADGE_MAP);
@@ -41,6 +41,13 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
   const [rerouteTarget, setRerouteTarget]        = useState(null);
   const [deleting, setDeleting]                  = useState(false);
   const [deleteError, setDeleteError]            = useState(null);
+  // Parent / mother reassignment in edit form
+  const [editParentTarget, setEditParentTarget]  = useState(null);
+  const [editParentSearch, setEditParentSearch]  = useState('');
+  const [clearParent, setClearParent]            = useState(false);
+  const [editMotherTarget, setEditMotherTarget]  = useState(null);
+  const [editMotherSearch, setEditMotherSearch]  = useState('');
+  const [clearMother, setClearMother]            = useState(false);
   const fileInputRef = useRef(null);
 
   if (!person) return null;
@@ -55,6 +62,17 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
   const rerouteResults = rerouteSearch.length > 1
     ? allPeople.filter((p) => p.id !== person.id && p.name.toLowerCase().includes(rerouteSearch.toLowerCase())).slice(0, 6)
     : [];
+
+  // Edit parent/mother search results
+  const parentResults = editParentSearch.length > 1
+    ? allPeople.filter((p) => p.id !== person.id && p.name.toLowerCase().includes(editParentSearch.toLowerCase())).slice(0, 6)
+    : [];
+  const motherResults = editMotherSearch.length > 1
+    ? allPeople.filter((p) => p.id !== person.id && p.name.toLowerCase().includes(editMotherSearch.toLowerCase())).slice(0, 6)
+    : [];
+
+  const currentParent = allPeople.find((p) => p.id === person.parent_id);
+  const currentMother = allPeople.find((p) => p.id === person.mother_id);
 
   // ── Handlers ──
   async function handleClaim() {
@@ -86,6 +104,12 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
       story: person.story || '',
       clan: person.clan || 'Kapmirmet',
     });
+    setEditParentTarget(null);
+    setEditParentSearch('');
+    setClearParent(false);
+    setEditMotherTarget(null);
+    setEditMotherSearch('');
+    setClearMother(false);
     setEditError(null);
     setIsEditing(true);
   }
@@ -103,6 +127,16 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
         story: editForm.story?.trim() || null,
         clan: editForm.clan || 'Kapmirmet',
       });
+      if (editParentTarget) {
+        await setPersonParent(person.id, editParentTarget.id);
+      } else if (clearParent) {
+        await setPersonParent(person.id, null);
+      }
+      if (editMotherTarget) {
+        await setPersonMother(person.id, editMotherTarget.id);
+      } else if (clearMother) {
+        await setPersonMother(person.id, null);
+      }
       setIsEditing(false);
       onPersonUpdated?.();
     } catch (err) {
@@ -228,6 +262,97 @@ export default function PersonPanel({ person, onClose, onAddRelative, onLoginReq
             </div>
           </div>
           <EField label="Clan" value={editForm.clan} onChange={(v) => setEditForm((f) => ({ ...f, clan: v }))} />
+
+          {/* ── Parent reassignment ── */}
+          <div>
+            <label style={labelStyle}>FATHER / PARENT IN TREE</label>
+            {clearParent ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(224,85,85,0.07)', border: '1px solid rgba(224,85,85,0.2)', borderRadius: '7px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '11.5px', color: '#e05555', fontFamily: 'var(--font-body)' }}>Will be detached from tree</span>
+                <button onClick={() => setClearParent(false)} style={{ background: 'none', border: 'none', color: '#A89070', cursor: 'pointer', fontSize: '10px', fontFamily: 'var(--font-mono)', padding: 0 }}>undo</button>
+              </div>
+            ) : editParentTarget ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(218,165,32,0.06)', border: '1px solid rgba(218,165,32,0.2)', borderRadius: '7px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '11.5px', color: '#DAA520', fontFamily: 'var(--font-body)' }}>{editParentTarget.gender === 'F' ? '♀' : '♂'} {editParentTarget.name}</span>
+                <button onClick={() => { setEditParentTarget(null); setEditParentSearch(''); }} style={{ background: 'none', border: 'none', color: '#5C4033', cursor: 'pointer', fontSize: '10px', fontFamily: 'var(--font-mono)', padding: 0 }}>✕</button>
+              </div>
+            ) : currentParent ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(92,64,51,0.1)', border: '1px solid rgba(92,64,51,0.25)', borderRadius: '7px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '11.5px', color: '#A89070', fontFamily: 'var(--font-body)' }}>Current: {currentParent.name}</span>
+                <button onClick={() => setClearParent(true)} style={{ background: 'none', border: 'none', color: '#5C4033', cursor: 'pointer', fontSize: '10px', fontFamily: 'var(--font-mono)', padding: 0 }}>remove</button>
+              </div>
+            ) : null}
+            <div style={{ position: 'relative' }}>
+              <input
+                placeholder="Search to assign / change parent…"
+                value={editParentSearch}
+                onChange={(e) => { setEditParentSearch(e.target.value); setEditParentTarget(null); setClearParent(false); }}
+                style={{ width: '100%', background: 'rgba(92,64,51,0.2)', border: '1px solid rgba(92,64,51,0.4)', borderRadius: '7px', padding: '8px 10px', color: '#E8DCC8', fontSize: '12.5px', fontFamily: 'var(--font-body)', outline: 'none', boxSizing: 'border-box' }}
+                onFocus={(e) => (e.target.style.borderColor = '#8B6914')}
+                onBlur={(e) => (e.target.style.borderColor = 'rgba(92,64,51,0.4)')}
+              />
+              {parentResults.length > 0 && !editParentTarget && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#1A120B', border: '1px solid rgba(92,64,51,0.5)', borderRadius: '7px', zIndex: 10, maxHeight: '140px', overflowY: 'auto', marginTop: '2px' }}>
+                  {parentResults.map((p) => (
+                    <button key={p.id} onClick={() => { setEditParentTarget(p); setEditParentSearch(p.name); setClearParent(false); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', background: 'none', border: 'none', cursor: 'pointer', color: '#D4C4A8', fontSize: '12.5px', fontFamily: 'var(--font-body)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(92,64,51,0.25)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <span>{p.gender === 'F' ? '♀' : '♂'}</span><span>{p.name}</span>
+                      {p.birth && <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#7B6845', fontFamily: 'var(--font-mono)' }}>b.{p.birth}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Mother reassignment ── */}
+          <div>
+            <label style={labelStyle}>MOTHER</label>
+            {clearMother ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(224,85,85,0.07)', border: '1px solid rgba(224,85,85,0.2)', borderRadius: '7px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '11.5px', color: '#e05555', fontFamily: 'var(--font-body)' }}>Will remove mother link</span>
+                <button onClick={() => setClearMother(false)} style={{ background: 'none', border: 'none', color: '#A89070', cursor: 'pointer', fontSize: '10px', fontFamily: 'var(--font-mono)', padding: 0 }}>undo</button>
+              </div>
+            ) : editMotherTarget ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(218,165,32,0.06)', border: '1px solid rgba(218,165,32,0.2)', borderRadius: '7px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '11.5px', color: '#DAA520', fontFamily: 'var(--font-body)' }}>♀ {editMotherTarget.name}</span>
+                <button onClick={() => { setEditMotherTarget(null); setEditMotherSearch(''); }} style={{ background: 'none', border: 'none', color: '#5C4033', cursor: 'pointer', fontSize: '10px', fontFamily: 'var(--font-mono)', padding: 0 }}>✕</button>
+              </div>
+            ) : currentMother ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(92,64,51,0.1)', border: '1px solid rgba(92,64,51,0.25)', borderRadius: '7px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '11.5px', color: '#A89070', fontFamily: 'var(--font-body)' }}>Current: {currentMother.name}</span>
+                <button onClick={() => setClearMother(true)} style={{ background: 'none', border: 'none', color: '#5C4033', cursor: 'pointer', fontSize: '10px', fontFamily: 'var(--font-mono)', padding: 0 }}>remove</button>
+              </div>
+            ) : null}
+            <div style={{ position: 'relative' }}>
+              <input
+                placeholder="Search to assign / change mother…"
+                value={editMotherSearch}
+                onChange={(e) => { setEditMotherSearch(e.target.value); setEditMotherTarget(null); setClearMother(false); }}
+                style={{ width: '100%', background: 'rgba(92,64,51,0.2)', border: '1px solid rgba(92,64,51,0.4)', borderRadius: '7px', padding: '8px 10px', color: '#E8DCC8', fontSize: '12.5px', fontFamily: 'var(--font-body)', outline: 'none', boxSizing: 'border-box' }}
+                onFocus={(e) => (e.target.style.borderColor = '#8B6914')}
+                onBlur={(e) => (e.target.style.borderColor = 'rgba(92,64,51,0.4)')}
+              />
+              {motherResults.length > 0 && !editMotherTarget && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#1A120B', border: '1px solid rgba(92,64,51,0.5)', borderRadius: '7px', zIndex: 10, maxHeight: '140px', overflowY: 'auto', marginTop: '2px' }}>
+                  {motherResults.map((p) => (
+                    <button key={p.id} onClick={() => { setEditMotherTarget(p); setEditMotherSearch(p.name); setClearMother(false); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', background: 'none', border: 'none', cursor: 'pointer', color: '#D4C4A8', fontSize: '12.5px', fontFamily: 'var(--font-body)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(92,64,51,0.25)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <span>♀</span><span>{p.name}</span>
+                      {p.birth && <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#7B6845', fontFamily: 'var(--font-mono)' }}>b.{p.birth}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <EField label="Story / Notes" value={editForm.story} onChange={(v) => setEditForm((f) => ({ ...f, story: v }))} multiline />
           {editError && <p style={{ color: '#e05555', fontSize: '11.5px', fontFamily: 'var(--font-body)', margin: 0 }}>{editError}</p>}
           <div style={{ display: 'flex', gap: '6px' }}>

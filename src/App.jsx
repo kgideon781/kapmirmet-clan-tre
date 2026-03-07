@@ -131,24 +131,6 @@ export default function App() {
       {/* Legend */}
       <Legend />
 
-      {/* Panels */}
-      {selectedPerson && (
-        <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} allPeople={allPeople} onPersonDeleted={() => { setSelectedPerson(null); setActivePanel(null); loadTree(); }} onPersonUpdated={loadTree} />
-      )}
-      {activePanel === 'story' && (
-        <ClanStoryPanel onClose={() => setActivePanel(null)} />
-      )}
-      {activePanel === 'add' && (
-        <AddSelfPanel onClose={() => { setActivePanel(null); setAddContext(null); }} anchor={addContext?.anchor} relationship={addContext?.relationship} insertBefore={addContext?.insertBefore} onPersonAdded={loadTree} allPeople={allPeople} />
-      )}
-      {activePanel === 'invite' && (
-        <InvitePanel onClose={() => setActivePanel(null)} />
-      )}
-      {activePanel === 'admin' && (
-        <AdminPanel onClose={() => setActivePanel(null)} onRefreshTree={loadTree} />
-      )}
-      {showLogin && <LoginPrompt onClose={() => setShowLogin(false)} />}
-
       {/* Click backdrop to close panels */}
       {(selectedPerson || activePanel) && (
         <div
@@ -165,7 +147,7 @@ export default function App() {
         />
       )}
 
-      {/* Re-render panels above backdrop */}
+      {/* Panels — single render above backdrop */}
       <div style={{ position: 'relative', zIndex: 30 }}>
         {selectedPerson && (
           <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} allPeople={allPeople} onPersonDeleted={() => { setSelectedPerson(null); setActivePanel(null); loadTree(); }} onPersonUpdated={loadTree} />
@@ -182,6 +164,7 @@ export default function App() {
         {activePanel === 'admin' && (
           <AdminPanel onClose={() => setActivePanel(null)} onRefreshTree={loadTree} />
         )}
+        {showLogin && <LoginPrompt onClose={() => setShowLogin(false)} />}
       </div>
 
       {/* Noise overlay */}
