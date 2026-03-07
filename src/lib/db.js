@@ -45,7 +45,6 @@ export function buildTree(people) {
 }
 
 export async function addPerson({ name, birth, death, gender, parentId, notes, clan, isSeedling }) {
-  const { data: { user } } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from('people')
     .insert({
@@ -58,7 +57,8 @@ export async function addPerson({ name, birth, death, gender, parentId, notes, c
       clan: clan || 'Kapmirmet',
       is_seedling: isSeedling !== undefined ? isSeedling : !parentId,
       status: 'pending',
-      added_by: user?.id || null,
+      // added_by intentionally omitted — column DEFAULT auth.uid() sets it
+      // server-side, avoiding any JWT timing issue between getUser() and insert
     })
     .select()
     .single();
@@ -90,19 +90,19 @@ export async function updatePerson(id, updates) {
 }
 
 export async function verifyPerson(id) {
-  const { error } = await supabase
-    .from('people')
-    .update({ status: 'verified', verified_at: new Date().toISOString() })
-    .eq('id', id);
+  const { error } = await supabase.rpc('verify_person', { person_id: id });
   if (error) throw error;
 }
 
 export async function rejectPerson(id) {
-  const { error } = await supabase
-    .from('people')
-    .update({ status: 'rejected' })
-    .eq('id', id);
+  const { error } = await supabase.rpc('reject_person', { person_id: id });
   if (error) throw error;
+}
+
+export async function verifyPeopleBulk(ids) {
+  const { data, error } = await supabase.rpc('verify_people_bulk', { ids });
+  if (error) throw error;
+  return data; // number of rows updated
 }
 
 export async function claimProfile(personId) {

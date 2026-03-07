@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, Check, XCircle, Clock, ShieldCheck, ShieldOff, Users, Trash2 } from 'lucide-react';
-import { fetchPending, verifyPerson, rejectPerson, fetchProfilesWithRoles, setUserRole, removeUserRole, deletePersonWithReroute, denyDeletionRequest } from '../lib/db';
+import { fetchPending, verifyPerson, rejectPerson, verifyPeopleBulk, fetchProfilesWithRoles, setUserRole, removeUserRole, deletePersonWithReroute, denyDeletionRequest } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminPanel({ onClose, onRefreshTree }) {
@@ -50,11 +50,14 @@ export default function AdminPanel({ onClose, onRefreshTree }) {
 
 // ── Verification Queue ──────────────────────────────────────────
 function QueueTab({ onRefreshTree }) {
-  const [queue, setQueue]     = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [queue, setQueue]       = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [actionError, setActionError] = useState(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   async function load() {
     setLoading(true);
+    setActionError(null);
     const data = await fetchPending();
     setQueue(data);
     setLoading(false);
@@ -63,26 +66,67 @@ function QueueTab({ onRefreshTree }) {
   useEffect(() => { load(); }, []);
 
   async function handleVerify(id) {
-    await verifyPerson(id);
-    setQueue((q) => q.filter((p) => p.id !== id));
-    onRefreshTree();
+    setActionError(null);
+    try {
+      await verifyPerson(id);
+      setQueue((q) => q.filter((p) => p.id !== id));
+      onRefreshTree();
+    } catch (e) {
+      setActionError(e.message || 'Failed to verify. Check console.');
+      console.error(e);
+    }
   }
 
   async function handleReject(id) {
-    await rejectPerson(id);
-    setQueue((q) => q.filter((p) => p.id !== id));
-    onRefreshTree();
+    setActionError(null);
+    try {
+      await rejectPerson(id);
+      setQueue((q) => q.filter((p) => p.id !== id));
+      onRefreshTree();
+    } catch (e) {
+      setActionError(e.message || 'Failed to reject.');
+      console.error(e);
+    }
   }
 
   async function handleApproveDeletion(id) {
-    await deletePersonWithReroute(id, { action: 'seedling' });
-    setQueue((q) => q.filter((p) => p.id !== id));
-    onRefreshTree();
+    setActionError(null);
+    try {
+      await deletePersonWithReroute(id, { action: 'seedling' });
+      setQueue((q) => q.filter((p) => p.id !== id));
+      onRefreshTree();
+    } catch (e) {
+      setActionError(e.message || 'Failed to delete.');
+      console.error(e);
+    }
   }
 
   async function handleDenyDeletion(id) {
-    await denyDeletionRequest(id);
-    setQueue((q) => q.filter((p) => p.id !== id));
+    setActionError(null);
+    try {
+      await denyDeletionRequest(id);
+      setQueue((q) => q.filter((p) => p.id !== id));
+    } catch (e) {
+      setActionError(e.message || 'Failed to deny.');
+      console.error(e);
+    }
+  }
+
+  async function handleApproveAll() {
+    const ids = queue.filter((p) => p._queueType === 'pending').map((p) => p.id);
+    if (!ids.length) return;
+    setBulkBusy(true);
+    setActionError(null);
+    try {
+      await verifyPeopleBulk(ids);
+      setQueue((q) => q.filter((p) => p._queueType !== 'pending'));
+      onRefreshTree();
+    } catch (e) {
+      setActionError(e.message || 'Bulk approve failed.');
+      console.error(e);
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
   if (loading) return <p style={{ color: '#7B6845', fontFamily: 'var(--font-body)', fontSize: '13px' }}>Loading…</p>;
@@ -99,12 +143,29 @@ function QueueTab({ onRefreshTree }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {actionError && (
+        <div style={{ padding: '10px 12px', background: 'rgba(224,85,85,0.1)', border: '1px solid rgba(224,85,85,0.3)', borderRadius: '8px', fontSize: '12px', color: '#e05555', fontFamily: 'var(--font-body)', lineHeight: 1.4 }}>
+          {actionError}
+        </div>
+      )}
+
       {/* Pending additions */}
       {pending.length > 0 && (
         <div>
-          <p style={{ fontSize: '10px', color: '#A89070', fontFamily: 'var(--font-mono)', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 8px' }}>
-            {pending.length} pending addition{pending.length !== 1 ? 's' : ''}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <p style={{ fontSize: '10px', color: '#A89070', fontFamily: 'var(--font-mono)', letterSpacing: '1px', textTransform: 'uppercase', margin: 0 }}>
+              {pending.length} pending addition{pending.length !== 1 ? 's' : ''}
+            </p>
+            {pending.length > 1 && (
+              <button
+                onClick={handleApproveAll}
+                disabled={bulkBusy}
+                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: '6px', color: '#4CAF50', cursor: bulkBusy ? 'default' : 'pointer', fontSize: '11px', fontFamily: 'var(--font-body)', fontWeight: 600, opacity: bulkBusy ? 0.6 : 1 }}
+              >
+                <Check size={11} /> {bulkBusy ? 'Approving…' : `Approve all ${pending.length}`}
+              </button>
+            )}
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {pending.map((person) => (
               <div key={person.id} style={cardStyle}>
@@ -322,7 +383,7 @@ function RoleBtn({ label, icon, active, busy, color, onClick }) {
 }
 
 // ── Styles ──
-const panelStyle = { position: 'absolute', top: 0, right: 0, width: '380px', maxWidth: '100vw', height: '100%', background: 'linear-gradient(180deg, #0D0906 0%, #1A120B 50%, #2C1810 100%)', borderLeft: '1px solid rgba(92,64,51,0.5)', zIndex: 30, overflowY: 'auto', padding: '20px', boxSizing: 'border-box', animation: 'slideInRight 0.35s var(--ease-out)', boxShadow: '-20px 0 60px rgba(0,0,0,0.5)' };
+const panelStyle = { position: 'absolute', top: 0, right: 0, width: '380px', maxWidth: '100vw', height: '100%', background: 'linear-gradient(180deg, #0D0906 0%, #1A120B 50%, #2C1810 100%)', borderLeft: '1px solid rgba(92,64,51,0.5)', zIndex: 30, overflowY: 'auto', padding: '20px', boxSizing: 'border-box', animation: 'slideInRight 0.35s var(--ease-out)', boxShadow: '-20px 0 60px rgba(0,0,0,0.5)', pointerEvents: 'auto' };
 const closeBtnStyle = { position: 'absolute', top: '14px', right: '14px', background: 'rgba(92,64,51,0.3)', border: '1px solid rgba(92,64,51,0.5)', borderRadius: '6px', padding: '6px', color: '#A89070', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 };
 const cardStyle = { background: 'rgba(92,64,51,0.12)', border: '1px solid rgba(92,64,51,0.3)', borderRadius: '10px', padding: '12px' };
 const verifyBtnStyle = { display: 'flex', alignItems: 'center', gap: '5px', flex: 1, justifyContent: 'center', padding: '8px', background: 'rgba(76,175,80,0.15)', border: '1px solid rgba(76,175,80,0.35)', borderRadius: '7px', color: '#4CAF50', cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-body)', fontWeight: 600 };

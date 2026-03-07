@@ -146,6 +146,7 @@ const panelStyle = {
   boxSizing: 'border-box',
   animation: 'slideInRight 0.35s var(--ease-out)',
   boxShadow: '-20px 0 60px rgba(0,0,0,0.5)',
+  pointerEvents: 'auto',
 };
 
 const closeBtnStyle = {
