@@ -148,7 +148,7 @@ export default function App() {
       )}
 
       {/* Panels — single render above backdrop */}
-      <div style={{ position: 'relative', zIndex: 30 }}>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 30, pointerEvents: 'none' }}>
         {selectedPerson && (
           <PersonPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} onAddRelative={handleAddRelative} onLoginRequired={() => setShowLogin(true)} allPeople={allPeople} onPersonDeleted={() => { setSelectedPerson(null); setActivePanel(null); loadTree(); }} onPersonUpdated={loadTree} />
         )}
