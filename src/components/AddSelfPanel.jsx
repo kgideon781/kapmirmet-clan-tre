@@ -17,7 +17,7 @@ function genderForRelationship(rel) {
   return 'M';
 }
 
-export default function AddSelfPanel({ onClose, anchor, relationship: initialRel, onPersonAdded }) {
+export default function AddSelfPanel({ onClose, anchor, relationship: initialRel, onPersonAdded, allPeople }) {
   const { user } = useAuth();
   const hasAnchor = !!anchor;
 
@@ -52,15 +52,31 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
   });
   const [children, setChildren]         = useState([]);
   const [showChildren, setShowChildren] = useState(false);
+  const [showDeath, setShowDeath]       = useState(false);
   const [saving, setSaving]             = useState(false);
   const [error, setError]               = useState(null);
   const [saved, setSaved]               = useState(null);
   const [chain, setChain]               = useState(null);
 
+  const effectiveAnchor = chain ? chain.anchor : anchor;
+
+  const [linkMode, setLinkMode]         = useState(false);
+  const [linkSearch, setLinkSearch]     = useState('');
+  const [linkTarget, setLinkTarget]     = useState(null);
+
+  const linkResults = hasAnchor
+    ? (allPeople || [])
+        .filter((p) => p.id !== effectiveAnchor?.id && p.name.toLowerCase().includes(linkSearch.toLowerCase()))
+        .slice(0, 8)
+    : [];
+
   const update = (key, val) => setForm((p) => ({ ...p, [key]: val }));
 
   function handleRelationshipChange(rel) {
     setRelationship(rel);
+    setLinkMode(false);
+    setLinkSearch('');
+    setLinkTarget(null);
     const g = genderForRelationship(rel);
     if (g) update('gender', g);
   }
@@ -90,7 +106,7 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
           newPerson = await addPerson({
             name: form.name, birth: form.birth, death: form.death,
             gender: form.gender, notes: form.story,
-            parentId: anchor?.id || null,
+            parentId: effectiveAnchor?.id || null,
             clan: form.clan || undefined,
           });
           break;
@@ -98,23 +114,25 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
           newPerson = await addPerson({
             name: form.name, birth: form.birth, death: form.death,
             gender: form.gender, notes: form.story,
-            parentId: anchor?.parent_id || null,
+            parentId: effectiveAnchor?.parent_id || null,
           });
           break;
         case 'mother': {
           newPerson = await addPerson({
             name: form.name, birth: form.birth, death: form.death,
-            gender: 'F', notes: form.story,
+            gender: 'F', notes: form.story, isSeedling: false,
           });
-          await setPersonMother(anchor.id, newPerson.id);
+          await setPersonMother(effectiveAnchor.id, newPerson.id);
           break;
         }
         case 'father': {
           newPerson = await addPerson({
             name: form.name, birth: form.birth, death: form.death,
             gender: 'M', notes: form.story,
+            parentId: effectiveAnchor?.parent_id || null,
+            isSeedling: false,
           });
-          await setPersonParent(anchor.id, newPerson.id);
+          await setPersonParent(effectiveAnchor.id, newPerson.id);
           break;
         }
         default:
@@ -142,6 +160,36 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
     }
   }
 
+  async function handleLinkSubmit() {
+    if (!linkTarget || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      switch (relationship) {
+        case 'child':
+          await setPersonParent(linkTarget.id, effectiveAnchor.id);
+          break;
+        case 'father':
+          await setPersonParent(effectiveAnchor.id, linkTarget.id);
+          break;
+        case 'mother':
+          await setPersonMother(effectiveAnchor.id, linkTarget.id);
+          break;
+        case 'sibling':
+          await setPersonParent(linkTarget.id, effectiveAnchor.parent_id);
+          break;
+        default:
+          throw new Error('Select a relationship first');
+      }
+      setSaved(linkTarget);
+      onPersonAdded?.();
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function startChain(chainRel) {
     setChain({ anchor: saved, relationship: chainRel });
     setSaved(null);
@@ -149,10 +197,11 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
     setRelationship(chainRel);
     setChildren([]);
     setShowChildren(false);
+    setLinkMode(false);
+    setLinkSearch('');
+    setLinkTarget(null);
     setError(null);
   }
-
-  const effectiveAnchor = chain ? chain.anchor : anchor;
 
   return (
     <div style={panelStyle}>
@@ -239,13 +288,103 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
             </div>
           )}
 
+          {/* ── New / Link toggle ── */}
+          {hasAnchor && (
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => { setLinkMode(false); setLinkSearch(''); setLinkTarget(null); }}
+                style={{ flex: 1, padding: '7px', borderRadius: '8px', cursor: 'pointer', fontSize: '11.5px', fontFamily: 'var(--font-body)', border: `1px solid ${!linkMode ? 'rgba(218,165,32,0.45)' : 'rgba(92,64,51,0.35)'}`, background: !linkMode ? 'rgba(218,165,32,0.12)' : 'rgba(92,64,51,0.1)', color: !linkMode ? '#DAA520' : '#A89070', transition: 'all 0.2s' }}
+              >+ New person</button>
+              <button
+                onClick={() => setLinkMode(true)}
+                style={{ flex: 1, padding: '7px', borderRadius: '8px', cursor: 'pointer', fontSize: '11.5px', fontFamily: 'var(--font-body)', border: `1px solid ${linkMode ? 'rgba(218,165,32,0.45)' : 'rgba(92,64,51,0.35)'}`, background: linkMode ? 'rgba(218,165,32,0.12)' : 'rgba(92,64,51,0.1)', color: linkMode ? '#DAA520' : '#A89070', transition: 'all 0.2s' }}
+              >Link existing</button>
+            </div>
+          )}
+
+          {linkMode ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  autoFocus
+                  placeholder="Search by name…"
+                  value={linkSearch}
+                  onChange={(e) => { setLinkSearch(e.target.value); setLinkTarget(null); }}
+                  style={{ width: '100%', background: 'rgba(92,64,51,0.2)', border: '1px solid rgba(92,64,51,0.4)', borderRadius: '8px', padding: '9px 12px', color: '#E8DCC8', fontSize: '13px', fontFamily: 'var(--font-body)', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={(e) => (e.target.style.borderColor = '#8B6914')}
+                  onBlur={(e) => (e.target.style.borderColor = 'rgba(92,64,51,0.4)')}
+                />
+                {linkSearch.length > 1 && !linkTarget && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#1A120B', border: '1px solid rgba(92,64,51,0.5)', borderRadius: '8px', zIndex: 10, maxHeight: '200px', overflowY: 'auto', marginTop: '3px' }}>
+                    {linkResults.length > 0 ? linkResults.map((p) => (
+                      <button key={p.id} onClick={() => { setLinkTarget(p); setLinkSearch(p.name); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '9px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: '#D4C4A8', fontSize: '13px', fontFamily: 'var(--font-body)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(92,64,51,0.25)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                      >
+                        <span>{p.gender === 'F' ? '♀' : '♂'}</span>
+                        <span>{p.name}</span>
+                        {p.birth && <span style={{ marginLeft: 'auto', color: '#7B6845', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>b.{p.birth}</span>}
+                      </button>
+                    )) : (
+                      <p style={{ padding: '10px 12px', fontSize: '12px', color: '#7B6845', fontFamily: 'var(--font-body)', margin: 0 }}>No matches found</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {linkTarget && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: 'rgba(218,165,32,0.06)', border: '1px solid rgba(218,165,32,0.2)', borderRadius: '8px' }}>
+                  <span>{linkTarget.gender === 'F' ? '♀' : '♂'}</span>
+                  <span style={{ fontSize: '13px', color: '#DAA520', fontFamily: 'var(--font-body)', fontWeight: 500 }}>{linkTarget.name}</span>
+                  {linkTarget.birth && <span style={{ fontSize: '11px', color: '#7B6845', fontFamily: 'var(--font-mono)', marginLeft: 'auto' }}>b.{linkTarget.birth}</span>}
+                </div>
+              )}
+
+              {relationship === 'sibling' && !effectiveAnchor?.parent_id && (
+                <p style={{ fontSize: '11px', color: '#e0883a', fontFamily: 'var(--font-body)', margin: 0 }}>
+                  {effectiveAnchor?.name} has no known parent — cannot link a sibling without a shared parent.
+                </p>
+              )}
+
+              {error && (
+                <p style={{ color: '#e05555', fontSize: '12px', margin: 0, fontFamily: 'var(--font-body)', padding: '8px 12px', background: 'rgba(224,85,85,0.08)', border: '1px solid rgba(224,85,85,0.2)', borderRadius: '8px' }}>
+                  {error}
+                </p>
+              )}
+
+              <button
+                onClick={handleLinkSubmit}
+                disabled={!linkTarget || saving || (relationship === 'sibling' && !effectiveAnchor?.parent_id)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '12px', background: linkTarget && !saving ? 'rgba(218,165,32,0.2)' : 'rgba(92,64,51,0.15)', border: `1px solid ${linkTarget && !saving ? 'rgba(218,165,32,0.4)' : 'rgba(92,64,51,0.3)'}`, borderRadius: '10px', color: linkTarget && !saving ? '#DAA520' : '#7B6845', cursor: linkTarget && !saving ? 'pointer' : 'default', fontSize: '14px', fontFamily: 'var(--font-body)', fontWeight: 600, marginTop: '4px', transition: 'all 0.2s' }}
+              >
+                <Sprout size={16} />
+                {saving ? 'Linking…' : 'Link This Person'}
+              </button>
+            </div>
+          ) : (
+            <>
           <Field label="Full Name" value={form.name} onChange={(v) => update('name', v)} placeholder="e.g. Kiprotich Korir" required />
 
-          {/* Birth + Death side by side */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <Field label="Year of Birth" value={form.birth} onChange={(v) => update('birth', v)} placeholder="e.g. 1942" />
-            <Field label="Year of Death" value={form.death} onChange={(v) => update('death', v)} placeholder="e.g. 2001" hint="Leave blank if living" />
-          </div>
+          <Field label="Year of Birth" value={form.birth} onChange={(v) => update('birth', v)} placeholder="e.g. 1942" />
+          {showDeath ? (
+            <div style={{ position: 'relative' }}>
+              <Field label="Year of Death" value={form.death} onChange={(v) => update('death', v)} placeholder="e.g. 2001" />
+              <button
+                onClick={() => { setShowDeath(false); update('death', ''); }}
+                style={{ position: 'absolute', top: 0, right: 0, background: 'none', border: 'none', color: '#5C4033', cursor: 'pointer', padding: '0', display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'var(--font-mono)', fontSize: '10px' }}
+              >
+                <Minus size={11} /> remove
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowDeath(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#8B6914', cursor: 'pointer', fontSize: '11px', fontFamily: 'var(--font-mono)', padding: '2px 0' }}
+            >
+              <Plus size={11} /> Deceased? Add year of death
+            </button>
+          )}
 
           {/* Gender */}
           <div>
@@ -277,7 +416,7 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
           </div>
 
           {/* Clan field for child of female */}
-          {relationship === 'child' && (effectiveAnchor ?? anchor)?.gender === 'F' && (
+          {relationship === 'child' && effectiveAnchor?.gender === 'F' && (
             <div>
               <Field label="Father's Clan" value={form.clan} onChange={(v) => update('clan', v)} placeholder="e.g. Kipkenda, Kapchemulwo…" />
               <p style={{ fontSize: '10.5px', color: '#7B6845', fontFamily: 'var(--font-body)', margin: '4px 0 0', lineHeight: 1.4 }}>
@@ -378,6 +517,8 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
             <Sprout size={16} />
             {saving ? 'Planting…' : 'Plant This Branch'}
           </button>
+            </>
+          )}
         </div>
       )}
     </div>

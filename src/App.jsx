@@ -139,7 +139,7 @@ export default function App() {
         <ClanStoryPanel onClose={() => setActivePanel(null)} />
       )}
       {activePanel === 'add' && (
-        <AddSelfPanel onClose={() => { setActivePanel(null); setAddContext(null); }} anchor={addContext?.anchor} relationship={addContext?.relationship} onPersonAdded={loadTree} />
+        <AddSelfPanel onClose={() => { setActivePanel(null); setAddContext(null); }} anchor={addContext?.anchor} relationship={addContext?.relationship} onPersonAdded={loadTree} allPeople={allPeople} />
       )}
       {activePanel === 'invite' && (
         <InvitePanel onClose={() => setActivePanel(null)} />
@@ -174,7 +174,7 @@ export default function App() {
           <ClanStoryPanel onClose={() => setActivePanel(null)} />
         )}
         {activePanel === 'add' && (
-          <AddSelfPanel onClose={() => { setActivePanel(null); setAddContext(null); }} anchor={addContext?.anchor} relationship={addContext?.relationship} onPersonAdded={loadTree} />
+          <AddSelfPanel onClose={() => { setActivePanel(null); setAddContext(null); }} anchor={addContext?.anchor} relationship={addContext?.relationship} onPersonAdded={loadTree} allPeople={allPeople} />
         )}
         {activePanel === 'invite' && (
           <InvitePanel onClose={() => setActivePanel(null)} />

@@ -44,7 +44,8 @@ export function buildTree(people) {
   return { tree, seedlings, mothersMap };
 }
 
-export async function addPerson({ name, birth, death, gender, parentId, notes, clan }) {
+export async function addPerson({ name, birth, death, gender, parentId, notes, clan, isSeedling }) {
+  const { data: { user } } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from('people')
     .insert({
@@ -55,8 +56,9 @@ export async function addPerson({ name, birth, death, gender, parentId, notes, c
       parent_id: parentId || null,
       story: notes?.trim() || null,
       clan: clan || 'Kapmirmet',
-      is_seedling: !parentId,
+      is_seedling: isSeedling !== undefined ? isSeedling : !parentId,
       status: 'pending',
+      added_by: user?.id || null,
     })
     .select()
     .single();
