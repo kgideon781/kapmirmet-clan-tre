@@ -40,7 +40,7 @@ export default function TreeCanvas({ svgRef, clanTree, seedlings, mothersMap, on
     shadow.append('feDropShadow').attr('dx', 0).attr('dy', 3).attr('stdDeviation', 4).attr('flood-color', 'rgba(0,0,0,0.4)');
 
     // Radial gradients for nodes
-    ['Kapmirmet', 'Kapcheboin'].forEach((clan) => {
+    Object.keys(CLAN_COLORS).forEach((clan) => {
       const c = CLAN_COLORS[clan];
       const grad = defs.append('radialGradient').attr('id', `nodeGrad-${clan}`);
       grad.append('stop').attr('offset', '0%').attr('stop-color', c.leaf);

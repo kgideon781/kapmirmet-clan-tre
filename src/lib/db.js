@@ -161,24 +161,19 @@ export async function denyDeletionRequest(personId) {
 export async function fetchProfilesWithRoles() {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, full_name, avatar_url, created_at, user_roles(role)')
+    .select('id, email, full_name, avatar_url, created_at, role')
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return (data ?? []).map((p) => ({
-    ...p,
-    role: p.user_roles?.[0]?.role || null,
-  }));
+  return data ?? [];
 }
 
 export async function setUserRole(userId, role) {
-  // Delete existing first (upsert needs an update policy we don't have)
-  await supabase.from('user_roles').delete().eq('user_id', userId);
-  const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
+  const { error } = await supabase.rpc('admin_set_role', { target_user_id: userId, new_role: role });
   if (error) throw error;
 }
 
 export async function removeUserRole(userId) {
-  const { error } = await supabase.from('user_roles').delete().eq('user_id', userId);
+  const { error } = await supabase.rpc('admin_remove_role', { target_user_id: userId });
   if (error) throw error;
 }
 
@@ -200,4 +195,59 @@ export async function fetchPending() {
     .filter((d) => !pending.find((p) => p.id === d.id))
     .map((p) => ({ ...p, _queueType: 'deletion' }));
   return [...pending, ...deletions];
+}
+
+// ── Clan Story ───────────────────────────────────────────────────
+
+export async function fetchClanStorySections() {
+  const { data, error } = await supabase
+    .from('clan_story_sections')
+    .select('id, title, content, sort_order')
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function saveClanStorySection({ id, title, content, sort_order }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from('clan_story_sections')
+    .upsert({ id, title, content, sort_order, updated_at: new Date().toISOString(), updated_by: user?.id ?? null });
+  if (error) throw error;
+}
+
+export async function fetchSectionEditHistory(sectionId) {
+  const { data, error } = await supabase
+    .from('clan_story_edits')
+    .select('id, content_after, edited_at, editor:profiles!edited_by(full_name, email)')
+    .eq('section_id', sectionId)
+    .order('edited_at', { ascending: false })
+    .limit(20);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchStorySuggestions() {
+  const { data, error } = await supabase
+    .from('clan_story_suggestions')
+    .select('id, section_id, suggested_content, created_at, suggester:profiles!suggested_by(full_name, email)')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function submitStorySuggestion(sectionId, suggestedContent) {
+  const { error } = await supabase
+    .from('clan_story_suggestions')
+    .insert({ section_id: sectionId, suggested_content: suggestedContent });
+  if (error) throw error;
+}
+
+export async function resolveStorySuggestion(id, approve) {
+  const { error } = await supabase
+    .from('clan_story_suggestions')
+    .update({ status: approve ? 'approved' : 'rejected' })
+    .eq('id', id);
+  if (error) throw error;
 }

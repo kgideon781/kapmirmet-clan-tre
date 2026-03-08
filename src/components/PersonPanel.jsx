@@ -9,8 +9,11 @@ const BADGE_KEYS = Object.keys(BADGE_MAP);
 export default function PersonPanel({ person, onClose, onAddRelative, onLoginRequired, onPersonDeleted, onPersonUpdated, allPeople = [] }) {
   const { user, isMod, role } = useAuth();
   const isAdmin = role === 'admin';
+  const isOwner = user?.id === person?.claimed_by;
   const isCreator = user && user.id === person?.added_by;
-  const canEdit = isAdmin || isMod || isCreator;
+  const canEdit = person?.claimed
+    ? (isAdmin || isOwner)
+    : (isAdmin || isMod || isCreator);
 
   const createdAt = person?.created_at ? new Date(person.created_at) : null;
   const within24h = createdAt && (Date.now() - createdAt.getTime()) < 24 * 60 * 60 * 1000;

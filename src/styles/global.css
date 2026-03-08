@@ -115,6 +115,16 @@ html, body, #root {
   50% { transform: scale(1.05); }
 }
 
+@keyframes ripple {
+  0%   { transform: translate(-50%, -50%) scale(0.8); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; }
+}
+
+@keyframes bounceDown {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(5px); }
+}
+
 /* ── UTILITY CLASSES ── */
 .text-gold { color: var(--gold); }
 .text-sand { color: var(--earth-sand); }

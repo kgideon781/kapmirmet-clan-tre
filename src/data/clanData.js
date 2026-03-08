@@ -49,9 +49,9 @@ const chebet = person('Chebet Mirmet', 1876, 1950, 'F', {
 });
 
 const kiprotich = person('Kiprotich Mirmet', 1878, 1935, 'M', {
-  clan: 'Kapcheboin',
+  clan: '',
   story:
-    'Broke away from the main Kapmirmet lineage to form the Kapcheboin offshoot clan. Though separate, the two clans share deep roots and mutual respect.',
+    'Broke away from the main Kapmirmet lineage to form the offshoot clan. Though separate, the two clans share deep roots and mutual respect.',
 });
 
 founder.children = [arapMirmet, kipkoech, chebet, kiprotich];
@@ -65,8 +65,8 @@ const kiplagat = person('Kiplagat arap Mirmet', 1900, 1975, 'M', {
 const jepkosgei = person('Jepkosgei arap Mirmet', 1903, 1980, 'F');
 const kibet = person('Kibet Kipkoech', 1902, 1970, 'M');
 const chepkemoi = person('Chepkemoi Kipkoech', 1905, 1978, 'F');
-const rotich = person('Rotich Kiprotich', 1904, 1968, 'M', { clan: 'Kapcheboin' });
-const jeptoo = person('Jeptoo Kiprotich', 1907, 1985, 'F', { clan: 'Kapcheboin' });
+const rotich = person('Rotich Kiprotich', 1904, 1968, 'M', { clan: '' });
+const jeptoo = person('Jeptoo Kiprotich', 1907, 1985, 'F', { clan: '' });
 const chemosMirmet = person('Chemos Mirmet', 1908, 1980, 'M');
 
 arapMirmet.children = [kiplagat, jepkosgei];
@@ -79,7 +79,7 @@ const chepkorir = person('Chepkorir Kiplagat', 1933, 2010, 'F');
 const bett = person('Bett Kiplagat', 1935, null, 'M', { claimed: true });
 const kiprop = person('Kiprop Kibet', 1932, 2000, 'M');
 const jepchirchir = person('Jepchirchir Kibet', 1934, 2015, 'F');
-const langat = person('Langat Rotich', 1933, 1998, 'M', { clan: 'Kapcheboin' });
+const langat = person('Langat Rotich', 1933, 1998, 'M', { clan: '' });
 const chesang = person('Chesang Jepkosgei', 1936, null, 'F', { claimed: true });
 const kibetChemos = person('Kibet Chemos', 1937, 2001, 'M');
 const jepngetich = person('Jepngetich Chepkemoi', 1938, null, 'F');
@@ -98,7 +98,7 @@ const tanui = person('Tanui Bett', 1962, null, 'M', { claimed: true });
 const chepngeno = person("Chepng'eno Bett", 1965, null, 'F');
 const kiptoo = person('Kiptoo Kiprop', 1961, null, 'M', { claimed: true });
 const chelimo = person('Chelimo Kiprop', 1964, null, 'F');
-const birech = person('Birech Langat', 1960, null, 'M', { clan: 'Kapcheboin', claimed: true });
+const birech = person('Birech Langat', 1960, null, 'M', { clan: '', claimed: true });
 const jepkemoi = person('Jepkemoi Chesang', 1962, null, 'F');
 const kipngetich = person('Kipngetich Kibet', 1963, null, 'M');
 const cherono = person('Cherono Jepngetich', 1966, null, 'F');
@@ -118,7 +118,7 @@ const emmanuel = person('Emmanuel Tanui', 1992, null, 'M', { claimed: true });
 const mercy = person('Mercy Tanui', 1995, null, 'F');
 const kevin = person('Kevin Kiptoo', 1991, null, 'M', { claimed: true });
 const sharon = person('Sharon Kiptoo', 1994, null, 'F', { claimed: true });
-const dennis = person('Dennis Birech', 1993, null, 'M', { clan: 'Kapcheboin' });
+const dennis = person('Dennis Birech', 1993, null, 'M', { clan: '' });
 const joy = person('Joy Jepkemoi', 1996, null, 'F');
 const victor = person('Victor Chelimo', 1997, null, 'M');
 const gloria = person("Gloria Chepng'eno", 1998, null, 'F');
@@ -169,8 +169,7 @@ export const BADGE_MAP = {
 };
 
 export const CLAN_COLORS = {
-  Kapmirmet:  { primary: '#B8860B', branch: '#8B6914', leaf: '#DAA520', glow: 'rgba(218,165,32,0.25)' },
-  Kapcheboin: { primary: '#6B8E23', branch: '#556B2F', leaf: '#9ACD32', glow: 'rgba(154,205,50,0.25)' },
+  Kapmirmet:  { primary: '#B8860B', branch: '#8B6914', leaf: '#DAA520', glow: 'rgba(218,165,32,0.25)' }
 };
 
 export const TIMELINE_YEARS = [1850, 1880, 1910, 1940, 1970, 2000, 2026];

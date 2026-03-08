@@ -26,12 +26,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function loadProfile(userId) {
-    const [{ data: prof }, { data: roleRow }] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', userId).single(),
-      supabase.from('user_roles').select('role').eq('user_id', userId).single(),
-    ]);
+    const { data: prof } = await supabase
+      .from('profiles').select('*').eq('id', userId).single();
     setProfile(prof ?? null);
-    setRole(roleRow?.role ?? null);
+    setRole(prof?.role ?? null);
     setLoading(false);
   }
 

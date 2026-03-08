@@ -244,6 +244,7 @@ function TeamTab({ currentUserId }) {
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [busy, setBusy]         = useState(null); // userId being updated
+  const [error, setError]       = useState(null);
 
   async function load() {
     setLoading(true);
@@ -252,6 +253,7 @@ function TeamTab({ currentUserId }) {
       setProfiles(data);
     } catch (e) {
       console.error(e);
+      setError('Failed to load members.');
     }
     setLoading(false);
   }
@@ -260,6 +262,7 @@ function TeamTab({ currentUserId }) {
 
   async function handleSetRole(userId, role) {
     setBusy(userId);
+    setError(null);
     try {
       if (role === null) {
         await removeUserRole(userId);
@@ -271,6 +274,7 @@ function TeamTab({ currentUserId }) {
       );
     } catch (e) {
       console.error(e);
+      setError(e.message || 'Failed to update role. Check the browser console.');
     }
     setBusy(null);
   }
@@ -278,14 +282,35 @@ function TeamTab({ currentUserId }) {
   if (loading) return <p style={{ color: '#7B6845', fontFamily: 'var(--font-body)', fontSize: '13px' }}>Loading members…</p>;
 
   if (profiles.length === 0) return (
-    <p style={{ color: '#7B6845', fontFamily: 'var(--font-body)', fontSize: '13px' }}>No members have signed in yet.</p>
+    <div>
+      <p style={{ color: '#7B6845', fontFamily: 'var(--font-body)', fontSize: '13px', margin: '0 0 10px' }}>
+        No members have signed in yet.
+      </p>
+      <div style={{ padding: '12px', background: 'rgba(92,64,51,0.1)', border: '1px solid rgba(92,64,51,0.25)', borderRadius: '10px' }}>
+        <p style={{ fontSize: '11px', color: '#A89070', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 6px' }}>How to add someone to the team</p>
+        <p style={{ fontSize: '12px', color: '#7B6845', fontFamily: 'var(--font-body)', lineHeight: 1.6, margin: 0 }}>
+          Share the tree link with them. Once they open it and <strong style={{ color: '#A89070' }}>sign in with their Google account</strong>, they'll appear here and you can assign them a role.
+        </p>
+      </div>
+    </div>
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <p style={{ fontSize: '11px', color: '#7B6845', fontFamily: 'var(--font-body)', margin: '0 0 4px', lineHeight: 1.5 }}>
-        {profiles.length} member{profiles.length !== 1 ? 's' : ''} · Assign roles to trusted members.
-      </p>
+      <div style={{ marginBottom: '4px' }}>
+        <p style={{ fontSize: '11px', color: '#7B6845', fontFamily: 'var(--font-body)', margin: '0 0 4px', lineHeight: 1.5 }}>
+          {profiles.length} member{profiles.length !== 1 ? 's' : ''} · Assign roles to trusted members.
+        </p>
+        <p style={{ fontSize: '10.5px', color: '#5C4033', fontFamily: 'var(--font-body)', margin: 0, lineHeight: 1.5 }}>
+          To add someone: share the tree link — they appear here once they sign in with Google.
+        </p>
+      </div>
+
+      {error && (
+        <div style={{ padding: '10px 12px', background: 'rgba(224,85,85,0.1)', border: '1px solid rgba(224,85,85,0.3)', borderRadius: '8px', fontSize: '12px', color: '#e05555', fontFamily: 'var(--font-body)', lineHeight: 1.4 }}>
+          {error}
+        </div>
+      )}
       {profiles.map((profile) => {
         const isSelf = profile.id === currentUserId;
         const isBusy = busy === profile.id;
@@ -325,34 +350,37 @@ function TeamTab({ currentUserId }) {
             {/* Role buttons — disabled for self */}
             {isSelf ? (
               <p style={{ fontSize: '10.5px', color: '#5C4033', fontFamily: 'var(--font-mono)', margin: 0 }}>Cannot change your own role</p>
-            ) : (
+            ) : profile.role ? (
+              /* Already has a role — just show remove */
               <div style={{ display: 'flex', gap: '5px' }}>
                 <RoleBtn
-                  label="Admin"
+                  label={`Remove ${profile.role}`}
+                  icon={<ShieldOff size={11} />}
+                  active={false}
+                  busy={isBusy}
+                  color="#e05555"
+                  onClick={() => handleSetRole(profile.id, null)}
+                />
+              </div>
+            ) : (
+              /* No role yet — show assignment options */
+              <div style={{ display: 'flex', gap: '5px' }}>
+                <RoleBtn
+                  label="Make Admin"
                   icon={<ShieldCheck size={11} />}
-                  active={profile.role === 'admin'}
+                  active={false}
                   busy={isBusy}
                   color="#DAA520"
-                  onClick={() => profile.role === 'admin' ? handleSetRole(profile.id, null) : handleSetRole(profile.id, 'admin')}
+                  onClick={() => handleSetRole(profile.id, 'admin')}
                 />
                 <RoleBtn
                   label="Moderator"
                   icon={<ShieldCheck size={11} />}
-                  active={profile.role === 'moderator'}
+                  active={false}
                   busy={isBusy}
                   color="#4CAF50"
-                  onClick={() => profile.role === 'moderator' ? handleSetRole(profile.id, null) : handleSetRole(profile.id, 'moderator')}
+                  onClick={() => handleSetRole(profile.id, 'moderator')}
                 />
-                {profile.role && (
-                  <RoleBtn
-                    label="Remove"
-                    icon={<ShieldOff size={11} />}
-                    active={false}
-                    busy={isBusy}
-                    color="#e05555"
-                    onClick={() => handleSetRole(profile.id, null)}
-                  />
-                )}
               </div>
             )}
           </div>

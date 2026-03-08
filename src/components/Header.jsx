@@ -56,7 +56,7 @@ export default function Header({ onOpenPanel, allPeople = [] }) {
 
         {/* Right side */}
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <HeaderBtn icon={<TreePine size={14} />} label="Plant Yourself" onClick={() => onOpenPanel('add')} />
+          <HeaderBtn icon={<TreePine size={14} />} label="Plant Yourself" onClick={() => onOpenPanel('add')} tourId="plant-btn" />
           <HeaderBtn icon={<Send size={14} />}     label="Invite Kin"     onClick={() => onOpenPanel('invite')} />
           <HeaderBtn icon={<BookOpen size={14} />} label="Clan Story"     onClick={() => onOpenPanel('story')} />
 
@@ -107,9 +107,9 @@ export default function Header({ onOpenPanel, allPeople = [] }) {
   );
 }
 
-function HeaderBtn({ icon, label, onClick, highlight }) {
+function HeaderBtn({ icon, label, onClick, highlight, tourId }) {
   return (
-    <button onClick={onClick} style={{ ...btnStyle, color: highlight ? '#4CAF50' : '#DAA520', borderColor: highlight ? 'rgba(76,175,80,0.4)' : 'rgba(92,64,51,0.6)' }}
+    <button onClick={onClick} data-tour-id={tourId} style={{ ...btnStyle, color: highlight ? '#4CAF50' : '#DAA520', borderColor: highlight ? 'rgba(76,175,80,0.4)' : 'rgba(92,64,51,0.6)' }}
       onMouseEnter={(e) => { e.currentTarget.style.background = highlight ? 'rgba(76,175,80,0.15)' : 'rgba(218,165,32,0.15)'; e.currentTarget.style.borderColor = highlight ? 'rgba(76,175,80,0.6)' : '#8B6914'; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(92,64,51,0.35)'; e.currentTarget.style.borderColor = highlight ? 'rgba(76,175,80,0.4)' : 'rgba(92,64,51,0.6)'; }}
     >

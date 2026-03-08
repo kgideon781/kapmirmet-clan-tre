@@ -7,6 +7,7 @@ import AddSelfPanel from './components/AddSelfPanel';
 import InvitePanel from './components/InvitePanel';
 import AdminPanel from './components/AdminPanel';
 import LoginPrompt from './components/LoginPrompt';
+import WelcomeGuide from './components/WelcomeGuide';
 import ZoomControls from './components/ZoomControls';
 import TimelineBar from './components/TimelineBar';
 import Legend from './components/Legend';
@@ -169,6 +170,9 @@ export default function App() {
 
       {/* Noise overlay */}
       <div className="noise-overlay" />
+
+      {/* First-visit guide */}
+      <WelcomeGuide onOpenPanel={handleOpenPanel} />
     </div>
   );
 }

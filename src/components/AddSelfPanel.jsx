@@ -25,15 +25,45 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
     return (
       <div style={panelStyle}>
         <button onClick={onClose} style={closeBtnStyle}><X size={18} /></button>
-        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <span style={{ fontSize: '40px', display: 'block', marginBottom: '16px' }}>🔐</span>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '18px', color: '#DAA520', margin: '0 0 8px' }}>Sign in to add family</p>
-          <p style={{ fontSize: '12px', color: '#7B6845', fontFamily: 'var(--font-body)', lineHeight: 1.5, margin: '0 0 20px' }}>
-            Additions require a verified identity to keep the clan record trustworthy.
-          </p>
-          <button onClick={signInWithGoogle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '12px', background: '#fff', border: 'none', borderRadius: '10px', color: '#333', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font-body)' }}>
-            Continue with Google
+        <div style={{ paddingTop: '28px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+            <span style={{ fontSize: '36px', display: 'block', lineHeight: 1, marginBottom: '12px' }}>🌱</span>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '19px', color: '#DAA520', margin: '0 0 6px' }}>One step to add family</p>
+            <p style={{ fontSize: '12px', color: '#7B6845', fontFamily: 'var(--font-body)', lineHeight: 1.5, margin: 0 }}>
+              Sign in so the clan knows who planted each branch.
+            </p>
+          </div>
+
+          {/* How it works steps */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
+            {[
+              { n: '1', label: 'Sign in with your Google account', sub: 'Use an account you already have — no new password' },
+              { n: '2', label: 'Fill in their details', sub: 'Name, year of birth, relationship to someone on the tree' },
+              { n: '3', label: 'Submit for review', sub: 'A trusted elder will verify and publish it to the full tree' },
+            ].map(({ n, label, sub }) => (
+              <div key={n} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '9px 10px', background: 'rgba(92,64,51,0.08)', borderRadius: '8px', border: '1px solid rgba(92,64,51,0.2)' }}>
+                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(218,165,32,0.15)', border: '1px solid rgba(218,165,32,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '10px', color: '#DAA520', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                  {n}
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '12.5px', color: '#E8DCC8', fontFamily: 'var(--font-body)', fontWeight: 500 }}>{label}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '10.5px', color: '#7B6845', fontFamily: 'var(--font-body)', lineHeight: 1.4 }}>{sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Google sign-in button */}
+          <button
+            onClick={signInWithGoogle}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '12px', background: '#fff', border: 'none', borderRadius: '10px', color: '#3c4043', cursor: 'pointer', fontSize: '13.5px', fontWeight: 600, fontFamily: 'var(--font-body)', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }}
+          >
+            <GoogleIcon />
+            Sign in with Google
           </button>
+          <p style={{ textAlign: 'center', fontSize: '10px', color: '#5C4033', fontFamily: 'var(--font-mono)', margin: '8px 0 0', lineHeight: 1.5 }}>
+            Free · Takes a few seconds · Uses your existing Google account
+          </p>
         </div>
       </div>
     );
@@ -529,6 +559,17 @@ export default function AddSelfPanel({ onClose, anchor, relationship: initialRel
         </div>
       )}
     </div>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    </svg>
   );
 }
 

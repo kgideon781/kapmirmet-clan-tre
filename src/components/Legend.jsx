@@ -20,7 +20,7 @@ export default function Legend() {
       ))}
       <LegendItem icon="●" label="Claimed" color="#4CAF50" />
       <LegendItem icon="●" label="Kapmirmet" color="#DAA520" />
-      <LegendItem icon="●" label="Kapcheboin" color="#9ACD32" />
+
     </div>
   );
 }
